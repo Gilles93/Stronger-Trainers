@@ -199,9 +199,7 @@ at that level, a party over six, or a slot over four moves.
 
 ## Verified against
 
-gen1recomp 0.1.72 (`gen1recomp-0.1.72-windows`) and the `dev` source checkout,
-with 111 headless checks through the game's real mod loader on both trees, plus
-a full load alongside 26 other installed mods.
+gen1recomp 0.1.72 (`gen1recomp-0.1.72-windows`)
 
 - Rosters: boss teams resolving to six with the right aces and move lists, the
   lab battle staying 1v1, ordinary parties scaling and padding, six-mon parties
