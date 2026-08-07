@@ -1,0 +1,20 @@
+{
+  "id": "stronger_trainers",
+  "name": "Stronger Trainers",
+  "version": "1.4.0",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "BALANCE",
+  "game_version": "0.0.0-dev || >=0.1.0 <2.0.0",
+  "priority": 100,
+  "permissions": [
+    "engine_internals"
+  ],
+  "dependencies": [],
+  "optional_dependencies": [],
+  "conflicts": [],
+  "incompatible": [],
+  "experimental": false,
+  "description": "Gym leaders, the Elite Four, the Champion, the rivals and Giovanni field full six-Pokemon teams with hand-picked movesets and a smarter, fair-play AI that estimates damage and weighs accuracy; gym battles let you pick the format and your team; every ordinary trainer gets a level bump. All adjustable from the MODS menu."
+}

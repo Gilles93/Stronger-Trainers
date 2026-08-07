@@ -1,0 +1,28 @@
+-- Sharing metadata: read by tooling and the manager detail pane, never by
+-- the loader's merge.
+return {
+  summary = "Full six-Pokemon boss teams with real movesets, plus a level bump for every other trainer.",
+  author = "starvingindiedev",
+  tags = { "balance", "difficulty", "trainers", "data-only" },
+  differences = {
+    changed = {
+      "the eight gym leaders each field six Pokemon instead of two to five",
+      "the Elite Four and the Champion field six, with coverage movesets",
+      "every rival battle from Route 22 onward is filled out; the lab battle stays one-on-one",
+      "Giovanni's three fights and the Celadon Chief field six",
+      "every other trainer's levels rise by a configurable percentage",
+      "parties shorter than the configured minimum are padded with the trainer's own species",
+    },
+    added = {
+      "MODS menu rows: BOSS TEAMS, BOSS MOVESETS, BOSS LEVEL BONUS, TRAINER LEVEL %, MIN PARTY SIZE",
+    },
+    known = {
+      "rosters are rewritten as each battle starts, so data.trainers still reads vanilla -- a mod that inspects trainer data outside battle (a rematch level warning, say) sees the original levels",
+      "prize money in gen 1 scales with the last Pokemon's level, so richer trainers are an expected side effect",
+    },
+  },
+  credits = {
+    { who = "pret/pokered", for_ = "the trainer, learnset and TM tables this is authored against" },
+  },
+  compat = { engine = ">=0.1.0 <2.0.0", modApi = 2 },
+}

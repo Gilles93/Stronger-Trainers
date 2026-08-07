@@ -190,5 +190,7 @@ full load alongside 26 other installed mods.
   classes, since a registered but unreferenced layer would never run. Brock keeps
   his original `aiMods`, `LAYER_3` is left intact, and each scoring rule is
   asserted exactly.
-unknown species, unknown move, or move a species cannot legally learn at that
-level.
+
+## Licence
+
+MIT. See `LICENSE`.
