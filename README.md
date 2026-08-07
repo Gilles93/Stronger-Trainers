@@ -114,9 +114,34 @@ separate layer id and references it from each trainer's `aiMods`, so both run
 additively and neither overwrites the other. Patching `LAYER_3` here would have
 silently thrown Modern Kanto's work away.
 
+## Overdue pre-evolutions
+
+Gen 1 is careless about this: 212 of its 999 trainer party slots are already
+past their own evolution level before this mod raises anything, and the level
+bump takes that to 326. Ordinary trainers now field the stage their level has
+actually earned. A level 16 Bulbasaur is an Ivysaur, a level 32 one is a
+Venusaur, and a Bug Catcher's level 13 Caterpie shows up as a Butterfree that
+knows Confusion. Chains run to completion rather than stopping a stage short.
+
+The evolved form brings its own level-up moveset with it, which is a bigger
+jump than the base stats alone. Route 3 in particular gets noticeably meaner.
+
+Stone evolutions carry no level in Gen 1, so `STONE EVO FROM LV` supplies one.
+It defaults to 30, taking a late Pikachu to Raichu and a Gloom to Vileplume. Set
+it to 0 to leave stone users alone.
+
+Evolution lines are read from the merged Pokémon data, not a private table, so
+other mods' evolution edits apply for free. With **All Pokémon Catchable 151**
+installed, its trade-evolution fixes (Kadabra, Graveler and Haunter at 42,
+Machoke at 45) reach trainers too.
+
+The 39 authored rosters are exempt, since their stages are chosen by hand.
+Evolving them would take Lance from two Dragonite to four and hand Blaine a
+second Rapidash.
+
 ## Tuning it while you play
 
-Eight rows under MODS > Stronger Trainers. They read live, so a change applies
+Ten rows under MODS > Stronger Trainers. They read live, so a change applies
 to the very next battle with no restart.
 
 | Row | Default | What it does |
@@ -129,16 +154,21 @@ to the very next battle with no restart.
 | `BOSS LEVEL BONUS` | 0 | Adds flat levels on top of the authored boss levels, up to +20 |
 | `TRAINER LEVEL %` | 15 | Level bump for every non-boss trainer. 0 leaves them alone |
 | `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this, reusing the trainer's own species |
+| `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers' Pokémon up to the stage their level has earned |
+| `STONE EVO FROM LV` | 30 | The level a stone evolution counts from. 0 leaves stone users on their pre-evo |
 
 If the early game bites too hard, drop `TRAINER LEVEL %` to 10 and `MIN PARTY
-SIZE` to 2. If you want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL
-%` 25.
+SIZE` to 2, or turn `EVOLVE PRE-EVOS` off for the Bug Catcher stretch. If you
+want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` 25.
 
 ## Worth knowing
 
 - Prize money goes up. Gen 1 pays out base money times the last Pokémon's level,
   so higher-level trainers are richer. That's the vanilla formula, not something
   this mod touches.
+- Experience goes up a little too, for the same reason. Gen 1 pays experience
+  off the defeated Pokémon's base experience, and evolved forms are worth more,
+  so beating an evolved trainer party levels you slightly faster than vanilla.
 - Rosters are rewritten as each battle starts, so `data.trainers` still reads
   vanilla outside battle. A mod that inspects trainer data ahead of time, like
   Trainer Rematch's level-gap warning, will quote the original levels. The
@@ -170,13 +200,20 @@ at that level, a party over six, or a slot over four moves.
 ## Verified against
 
 gen1recomp 0.1.72 (`gen1recomp-0.1.72-windows`) and the `dev` source checkout,
-with 87 headless checks through the game's real mod loader on both trees, plus a
-full load alongside 26 other installed mods.
+with 111 headless checks through the game's real mod loader on both trees, plus
+a full load alongside 26 other installed mods.
 
 - Rosters: boss teams resolving to six with the right aces and move lists, the
   lab battle staying 1v1, ordinary parties scaling and padding, six-mon parties
   not growing past six, the level clamp at 100, and the input party table never
   being mutated.
+- Evolutions: both sides of the exact boundary (a level 19 Magikarp stays, a
+  level 20 becomes Gyarados), two-step chains completing, species with no
+  evolutions and species the build doesn't carry falling through untouched,
+  stone evolutions firing only at or above the configured level and never at 0,
+  trade rows never firing on their own, Eevee resolving to one eeveelution and
+  the same one every call, padded copies matching the evolved slot, and all 39
+  authored rosters coming back with their exact species lists.
 - Formats: a talk override on all 8 gyms, the ace present at every format across
   240 random rolls, exact counts, picks ordered lead to ace, the picker offering
   2 to 6 whatever your party size, never reaching 1 over 30 presses, and wrapping

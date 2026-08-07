@@ -9,7 +9,8 @@
 --     Chief -- are replaced outright by authored six-slot teams carrying
 --     hand-picked movesets.
 --   * every other party in the game keeps its own species and gets a
---     proportional level bump, and short parties are padded out.
+--     proportional level bump, short parties are padded out, and any slot
+--     left standing past its own evolution level is walked up its line.
 --
 -- Why the hook and not `mod.content.trainers:patch`:
 --
@@ -58,18 +59,68 @@ local function bossParty(team, bonus, withMoves)
   return out
 end
 
+-- Gen 1 leaves trainers holding pre-evolutions long past the level they would
+-- have evolved at: 212 of the 999 vanilla party slots are already overdue
+-- before this mod raises anything, and the level bump takes that to 326.  This
+-- walks a slot up its line to the stage its level has actually earned.
+--
+-- `lookup` reads the MERGED pokemon registry rather than a table of our own,
+-- so another mod's evolution edits are honoured without this file naming them
+-- -- with all_pokemon_catchable_151 installed the four trade lines carry a
+-- LEVEL row (KADABRA/GRAVELER/HAUNTER at 42, MACHOKE at 45) and those fire
+-- here too.
+--
+-- Stone evolutions carry no level at all, so one has to be invented for them:
+-- `stoneLevel`, with 0 meaning "leave stone users on their pre-evo".  EEVEE is
+-- the only species with more than one stone row, and the first row wins, which
+-- is the same first-match rule Evolution.pendingFor dispatches on.
+local MAX_EVO_STEPS = 5   -- gen 1's longest line is 3; this is a cycle guard
+
+local function evolvedSpecies(lookup, species, level, stoneLevel)
+  local seen = {}
+  local current = species
+  for _ = 1, MAX_EVO_STEPS do
+    if seen[current] then break end
+    seen[current] = true
+    local def = lookup(current)
+    local target
+    for _, evo in ipairs(def and def.evolutions or {}) do
+      local byLevel = evo.method == "LEVEL" and evo.level
+                      and level >= evo.level
+      local byStone = evo.method == "ITEM" and stoneLevel > 0
+                      and level >= stoneLevel
+      if byLevel or byStone then
+        target = evo.species
+        break
+      end
+    end
+    -- a line naming a species this build does not carry stops where it is,
+    -- rather than handing the battle builder a slot Pokemon.new would assert on
+    if not target or not lookup(target) then break end
+    current = target
+  end
+  return current
+end
+
 -- Ordinary trainers: same species, levels raised by `pct`, then padded up to
 -- `minSize` by cycling back through the trainer's own mons -- a Bug Catcher
 -- gains another Caterpie rather than something off-theme, and the copies come
 -- from the front of the list so the ace stays the ace.
-local function scaleParty(party, pct, minSize)
+--
+-- `evolve` runs after the bump and before the padding, so a padded copy is a
+-- copy of the evolved slot and the two never disagree.  It is nil when the
+-- player has the option off.
+local function scaleParty(party, pct, minSize, evolve)
   local out = {}
   for i, slot in ipairs(party) do
     local level = slot.level or 1
     if pct > 0 then
       level = level + math.max(1, math.floor(level * pct / 100 + 0.5))
     end
-    out[i] = { species = slot.species, level = clampLevel(level) }
+    level = clampLevel(level)
+    local species = slot.species
+    if evolve and species then species = evolve(species, level) end
+    out[i] = { species = species, level = level }
     -- carry through anything another mod put on the slot (a `moves` list of
     -- its own, for instance) without knowing what it is
     for k, v in pairs(slot) do
@@ -166,10 +217,27 @@ return function(mod)
       default = 15, min = 0, max = 50, step = 5 },
     { key = "min_party", label = "MIN PARTY SIZE", type = "number",
       default = 3, min = 1, max = 6, step = 1 },
+    { key = "evolve_pre_evos", label = "EVOLVE PRE-EVOS", type = "toggle",
+      default = true },
+    -- 0 leaves stone users alone; the row only matters with the toggle on
+    { key = "stone_level", label = "STONE EVO FROM LV", type = "number",
+      default = 30, min = 0, max = 60, step = 5 },
   })
 
   local function num(key, fallback)
     return math.floor(tonumber(mod.options:get(key)) or fallback)
+  end
+
+  -- Read through the merged registry every call rather than caching a table:
+  -- registries settle after every mod has loaded, and a cache built here would
+  -- miss whatever loads after us.  A build without the registry makes this
+  -- answer nil, which turns the evolution pass into a clean no-op.
+  local pokedex = mod.content and mod.content.pokemon
+  local function speciesDef(id)
+    if not (pokedex and pokedex.get) then return nil end
+    local ok, def = pcall(pokedex.get, pokedex, id)
+    if ok then return def end
+    return nil
   end
 
   -- published so the format state and the roster trimming can be driven
@@ -178,6 +246,8 @@ return function(mod)
   mod.exports.formatState = formatState
   mod.exports.trimToFormat = trimToFormat
   mod.exports.aiState = aiState
+  mod.exports.evolvedSpecies = evolvedSpecies
+  mod.exports.speciesDef = speciesDef
 
   mod.hooks:wrap("trainer.party", function(next, oppClass, partyIndex, _party)
     -- let the rest of the chain settle first, then transform what it agreed on
@@ -196,7 +266,19 @@ return function(mod)
       return bossParty(team, num("boss_bonus", 0),
                        mod.options:get("boss_moves") ~= false)
     end
-    return scaleParty(party, num("trainer_levels", 15), num("min_party", 3))
+    -- Authored rosters above returned already: they are picked stage by stage
+    -- on purpose, and evolving them would take Lance from two DRAGONITE to
+    -- four and give Blaine a second RAPIDASH.  Only the game's own parties
+    -- are walked up.
+    local evolve = nil
+    if mod.options:get("evolve_pre_evos") ~= false then
+      local stone = num("stone_level", 30)
+      evolve = function(species, level)
+        return evolvedSpecies(speciesDef, species, level, stone)
+      end
+    end
+    return scaleParty(party, num("trainer_levels", 15), num("min_party", 3),
+                      evolve)
   end)
 
   -- The two feature files reach for engine modules, so each is installed

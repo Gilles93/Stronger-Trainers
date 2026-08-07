@@ -125,9 +125,32 @@ parties shorter than a configurable minimum get padded out with more of that
 trainer's own Pokémon. A Bug Catcher gains another Caterpie rather than
 something off-theme.
 
+### No more overdue pre-evolutions
+
+Gen 1 leaves trainers holding Pokémon years past the level they should have
+evolved at. 212 of the game's 999 party slots are already overdue before this
+mod raises anything, and the level bump takes that to 326. Any slot standing
+past its own evolution level is now walked up its line, all the way: a level 16
+Bulbasaur is an Ivysaur, a level 32 one is a Venusaur, and a Bug Catcher's
+level 13 Caterpie arrives as a Butterfree with Confusion.
+
+Stone evolutions have no level in Gen 1, so one is invented for them. `STONE EVO
+FROM LV` is 30 by default, which is what turns a late Pikachu into a Raichu or a
+Gloom into a Vileplume. Set it to 0 to leave stone users on their pre-evolved
+form.
+
+The line is read from the merged Pokémon data rather than a table of the mod's
+own, so another mod's evolution edits are honoured automatically. With **All
+Pokémon Catchable 151** installed, its trade-evolution fixes (Kadabra, Graveler
+and Haunter at 42, Machoke at 45) start applying to trainers too.
+
+The 39 authored boss rosters are deliberately exempt. Their stages are picked
+by hand, and evolving them would take Lance from two Dragonite to four and give
+Blaine a second Rapidash.
+
 ## Options
 
-Eight rows under MODS > Stronger Trainers. They're read live, so a change
+Ten rows under MODS > Stronger Trainers. They're read live, so a change
 applies to the very next battle with no restart needed.
 
 | Row | Default | Effect |
@@ -140,6 +163,8 @@ applies to the very next battle with no restart needed.
 | `BOSS LEVEL BONUS` | 0 | Flat levels on top of the authored boss levels, up to +20 |
 | `TRAINER LEVEL %` | 15 | Level bump for non-boss trainers. 0 leaves them alone |
 | `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this |
+| `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers' Pokémon up to the stage their level has earned |
+| `STONE EVO FROM LV` | 30 | The level a stone evolution counts from. 0 leaves stone users alone |
 
 If it bites too hard early on, try `TRAINER LEVEL %` at 10 and `MIN PARTY SIZE`
 at 2. If you want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` at
