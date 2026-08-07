@@ -148,9 +148,30 @@ The 39 authored boss rosters are deliberately exempt. Their stages are picked
 by hand, and evolving them would take Lance from two Dragonite to four and give
 Blaine a second Rapidash.
 
+### Slower levelling
+
+All of the above makes trainers pay out more experience: more Pokémon, higher
+levels, and evolved forms worth more than the pre-evos they replace. Left alone
+that would hand much of the added difficulty straight back to you.
+
+`XP GAIN %` is the counterweight, a straight percentage of the normal payout,
+and it ships at 75. You keep three quarters of what Gen 1 would have given you.
+100 turns it off, 50 halves your experience, and 25 is as low as it goes.
+
+It covers every battle, trainer and wild alike, and scales the "gained N EXP"
+message to match. A Pokémon that fought always earns at least 1 point.
+
+Stat experience is left alone on purpose, so you level more slowly but each
+Pokémon is as strong at a given level as it always was. This stretches the game
+out rather than quietly weakening your team.
+
+It plays well with other experience mods. QoL Toggles' `EXP x2` and this
+setting multiply out, so `EXP x2` with `XP GAIN %` at 50 lands back at the
+normal rate.
+
 ## Options
 
-Ten rows under MODS > Stronger Trainers. They're read live, so a change
+Eleven rows under MODS > Stronger Trainers. They're read live, so a change
 applies to the very next battle with no restart needed.
 
 | Row | Default | Effect |
@@ -165,6 +186,7 @@ applies to the very next battle with no restart needed.
 | `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this |
 | `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers' Pokémon up to the stage their level has earned |
 | `STONE EVO FROM LV` | 30 | The level a stone evolution counts from. 0 leaves stone users alone |
+| `XP GAIN %` | 75 | Percentage of the normal experience payout. 100 turns it off, 50 halves it |
 
 If it bites too hard early on, try `TRAINER LEVEL %` at 10 and `MIN PARTY SIZE`
 at 2. If you want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` at

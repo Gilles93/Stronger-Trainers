@@ -132,16 +132,40 @@ it to 0 to leave stone users alone.
 
 Evolution lines are read from the merged Pokémon data, not a private table, so
 other mods' evolution edits apply for free. With **All Pokémon Catchable 151**
-installed ((from DarkLinkDuck), its trade-evolution fixes (Kadabra, Graveler and Haunter at 42,
-Machoke at 45) reach trainers too.
+(from DarkLinkDuck) installed, its trade-evolution fixes (Kadabra, Graveler and
+Haunter at 42, Machoke at 45) reach trainers too.
 
 The 39 authored rosters are exempt, since their stages are chosen by hand.
 Evolving them would take Lance from two Dragonite to four and hand Blaine a
 second Rapidash.
 
+## Slowing experience down
+
+Everything above makes trainers pay out more: they field more Pokémon, at
+higher levels, and evolved forms are worth more experience than the pre-evos
+they replace. Left alone, that hands a good chunk of the added difficulty back
+to you in free levels.
+
+`XP GAIN %` is the counterweight, and it ships at **75**, so you keep three
+quarters of what Gen 1 would have paid. Set it to 100 to turn it off entirely,
+or as low as 25 if you want the game to last a very long time.
+
+It applies to every battle, trainer and wild alike, and it scales the "gained N
+EXP" message along with the total, so the text never disagrees with what you
+actually got. A Pokémon that fought always earns at least 1 point, however far
+you turn it down.
+
+Stat experience is deliberately untouched. You level more slowly, but each
+Pokémon is exactly as strong at a given level as it would normally be, so this
+lengthens the game rather than quietly weakening your team.
+
+It composes with other experience mods rather than overriding them. If you run
+QoL Toggles with `EXP x2` on, that doubling and this reduction multiply out, so
+`EXP x2` with `XP GAIN %` at 50 is simply the normal rate.
+
 ## Tuning it while you play
 
-Ten rows under MODS > Stronger Trainers. They read live, so a change applies
+Eleven rows under MODS > Stronger Trainers. They read live, so a change applies
 to the very next battle with no restart.
 
 | Row | Default | What it does |
@@ -156,6 +180,7 @@ to the very next battle with no restart.
 | `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this, reusing the trainer's own species |
 | `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers' Pokémon up to the stage their level has earned |
 | `STONE EVO FROM LV` | 30 | The level a stone evolution counts from. 0 leaves stone users on their pre-evo |
+| `XP GAIN %` | 75 | Percentage of the normal experience payout. 100 turns it off, 50 halves it |
 
 If the early game bites too hard, drop `TRAINER LEVEL %` to 10 and `MIN PARTY
 SIZE` to 2, or turn `EVOLVE PRE-EVOS` off for the Bug Catcher stretch. If you
@@ -166,9 +191,9 @@ want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` 25.
 - Prize money goes up. Gen 1 pays out base money times the last Pokémon's level,
   so higher-level trainers are richer. That's the vanilla formula, not something
   this mod touches.
-- Experience goes up a little too, for the same reason. Gen 1 pays experience
-  off the defeated Pokémon's base experience, and evolved forms are worth more,
-  so beating an evolved trainer party levels you slightly faster than vanilla.
+- Experience would go up a little too, for the same reason. Gen 1 pays
+  experience off the defeated Pokémon's base experience, and evolved forms are
+  worth more. `XP GAIN %` is set to 75 out of the box to offset exactly that.
 - Rosters are rewritten as each battle starts, so `data.trainers` still reads
   vanilla outside battle. A mod that inspects trainer data ahead of time, like
   Trainer Rematch's level-gap warning, will quote the original levels. The

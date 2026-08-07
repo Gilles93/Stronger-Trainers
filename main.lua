@@ -1,6 +1,6 @@
 -- Stronger Trainers
 --
--- Two changes, both landing in one place: the `trainer.party` hook that
+-- Most of it lands in one place: the `trainer.party` hook that
 -- BattleState.newTrainer offers just after it picks a roster and before it
 -- instantiates any Pokemon (src/battle/BattleState.lua:670).
 --
@@ -11,6 +11,9 @@
 --   * every other party in the game keeps its own species and gets a
 --     proportional level bump, short parties are padded out, and any slot
 --     left standing past its own evolution level is walked up its line.
+--
+-- One thing does not: the optional XP reduction rides `exp.gain` instead,
+-- which is the engine's own per-participant payout hook.
 --
 -- Why the hook and not `mod.content.trainers:patch`:
 --
@@ -143,6 +146,17 @@ local function scaleParty(party, pct, minSize, evolve)
   return out
 end
 
+-- XP payout scaling.  `pct` is a percentage of normal, so 100 is a no-op and
+-- the option row never has to be consulted twice.  The engine floors every
+-- division in its own exp maths and never pays less than 1 point
+-- (Experience.gainFor), so the same floor is kept here: a reduced payout can
+-- get very small, but a Pokemon that fought always earns something.
+local function scaleXp(gained, pct)
+  if type(gained) ~= "number" then return gained end
+  if not pct or pct >= 100 then return gained end
+  return math.max(1, math.floor(gained * pct / 100))
+end
+
 -- Sibling files are read and compiled by hand rather than required: mods are
 -- sandboxed away from the game's package path (the same shape SHINY_POKEMON
 -- uses for its palette table).  A sibling that fails to load costs its own
@@ -222,6 +236,10 @@ return function(mod)
     -- 0 leaves stone users alone; the row only matters with the toggle on
     { key = "stone_level", label = "STONE EVO FROM LV", type = "number",
       default = 30, min = 0, max = 60, step = 5 },
+    -- a percentage of the normal payout; 100 is off, and the default trims a
+    -- quarter to offset what the bigger, evolved trainer parties pay out
+    { key = "xp_gain", label = "XP GAIN %", type = "number",
+      default = 75, min = 25, max = 100, step = 5 },
   })
 
   local function num(key, fallback)
@@ -248,6 +266,7 @@ return function(mod)
   mod.exports.aiState = aiState
   mod.exports.evolvedSpecies = evolvedSpecies
   mod.exports.speciesDef = speciesDef
+  mod.exports.scaleXp = scaleXp
 
   mod.hooks:wrap("trainer.party", function(next, oppClass, partyIndex, _party)
     -- let the rest of the chain settle first, then transform what it agreed on
@@ -279,6 +298,24 @@ return function(mod)
     end
     return scaleParty(party, num("trainer_levels", 15), num("min_party", 3),
                       evolve)
+  end)
+
+  -- XP payout.  `exp.gain` is consulted once per participant and the number it
+  -- returns is also the one the "gained N EXP" line prints, so scaling here
+  -- keeps the announcement and the total honest with each other.
+  --
+  -- Wrapping rather than replacing is what makes this compose: qol_toggles'
+  -- EXP x2 and trainer_rematch's rematch payout wrap this same hook, and each
+  -- transforms whatever the previous link produced.  They multiply out, so
+  -- EXP x2 against 50% here really is the normal rate, in any hook order.
+  --
+  -- Stat exp is deliberately left alone.  Experience.apply credits it before
+  -- this hook is consulted (Experience.lua:58-61), so a Pokemon levels more
+  -- slowly but is exactly as strong at a given level as it would otherwise be.
+  mod.hooks:wrap("exp.gain", function(next, ctx)
+    -- the fallback matches the declared default, so an unreadable option row
+    -- yields the documented behaviour rather than a quietly different game
+    return scaleXp(next(ctx), num("xp_gain", 75))
   end)
 
   -- The two feature files reach for engine modules, so each is installed
