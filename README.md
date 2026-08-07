@@ -132,7 +132,7 @@ it to 0 to leave stone users alone.
 
 Evolution lines are read from the merged Pokémon data, not a private table, so
 other mods' evolution edits apply for free. With **All Pokémon Catchable 151**
-installed, its trade-evolution fixes (Kadabra, Graveler and Haunter at 42,
+installed ((from DarkLinkDuck), its trade-evolution fixes (Kadabra, Graveler and Haunter at 42,
 Machoke at 45) reach trainers too.
 
 The 39 authored rosters are exempt, since their stages are chosen by hand.
