@@ -116,6 +116,23 @@ class GameData:
             ok.update(rec.get("tmhm") or [])
         return frozenset(m for m in ok if m in self.moves)
 
+    @lru_cache(maxsize=None)
+    def levelup_moves(self, species: str, level: int):
+        """Only what this slot learns by growing up, pre-evolutions included.
+
+        The early-gym availability gate needs to tell a move the Pokemon
+        simply knows from a move it was taught off a TM the player has no way
+        to own yet. Body Slam is both, depending on the species.
+        """
+        ok = set()
+        for stage in self._line(species):
+            rec = self.species[stage]
+            ok.update(rec.get("level1Moves") or [])
+            for row in (rec.get("learnset") or []):
+                if row["level"] <= level:
+                    ok.add(row["move"])
+        return frozenset(m for m in ok if m in self.moves)
+
     def types(self, species: str):
         return tuple(self.species[species]["types"])
 

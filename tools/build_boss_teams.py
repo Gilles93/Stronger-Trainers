@@ -24,7 +24,26 @@ import os
 import sys
 
 import curve
+import availability
 import gamedata
+
+# Effects the AI cannot play well, so authoring them wastes a slot.
+#
+# CHARGE_EFFECT is the one that bit twice. smart_ai.lua scores a move on the
+# damage Damage.compute reports, and for a charge move that is the full hit
+# with no account of the turn spent winding up -- so the AI rates Dig above
+# Rock Slide and then spends every other turn underground. Sky Attack was
+# pulled for this in 1.7.0 and Dig was missed; it is a rule now, not a
+# judgement call.
+#
+# EXPLODE and the trapping moves are suppressed by smart_ai on purpose: they
+# are the cheese the AI is built not to play.
+BANNED_EFFECTS = {
+    "CHARGE_EFFECT": "spends a turn charging, which the AI does not model",
+    "EXPLODE_EFFECT": "scored down by smart_ai on purpose",
+    "TRAPPING_EFFECT": "scored down by smart_ai on purpose",
+    "OHKO_EFFECT": "a coin flip, not a fight",
+}
 import progression
 import rosters
 
@@ -43,6 +62,19 @@ def _levels(ace: int, size: int):
                for d in curve.SPREAD[curve.MAX_PARTY - size:])
 
 
+def moves_for(spec, version: str):
+    """A slot's move list, which may vary by version.
+
+    Yellow's rosters sit at their own computed levels, so a level-up move can
+    be legal in Red and out of reach in Yellow with the same species -- Brock's
+    Onix is 19 in Red and 17 in Yellow, and Rock Throw arrives at 19. A slot
+    may therefore give a dict keyed by version, with "*" as the default.
+    """
+    if isinstance(spec, dict):
+        return list(spec.get(version) or spec["*"])
+    return list(spec)
+
+
 def build_version(version: str, boss_ace: dict):
     """Every roster this version should carry, keyed "CLASS#party"."""
     out = {}
@@ -56,7 +88,8 @@ def build_version(version: str, boss_ace: dict):
             cls = key.split("#")[0]
             ace = boss_ace[cls] if cls in boss_ace else boss_ace[key]
             levels = _levels(ace, len(team))
-            out[key] = [(sp, lv, mv) for (sp, mv), lv in zip(team, levels)]
+            out[key] = [(sp, lv, moves_for(mv, version))
+                        for (sp, mv), lv in zip(team, levels)]
 
     # --- rivals
     for label, _red, _yellow in progression.RIVAL_BATTLES:
@@ -120,10 +153,67 @@ def validate(version: str, table):
                 if mv not in g.moves:
                     problems.append(
                         f"{version} {key} slot {pos} {species}: no move {mv}")
+                elif (g.moves[mv].get("effect") or "") in BANNED_EFFECTS:
+                    problems.append(
+                        f"{version} {key} slot {pos}: {species} {mv} "
+                        f"{BANNED_EFFECTS[g.moves[mv]['effect']]}")
+                elif (availability.is_gated(key)
+                      and availability.is_coverage(
+                          (g.moves[mv].get("type")), key, g.types(species))
+                      and (g.moves[mv].get("power") or 0) > 0
+                      and mv not in g.levelup_moves(species, level)
+                      and not availability.available(mv, key)):
+                    problems.append(
+                        f"{version} {key} slot {pos}: {species} {mv} needs a "
+                        f"TM the player cannot own by that gym")
                 elif mv not in g.legal_moves(species, level):
                     problems.append(
                         f"{version} {key} slot {pos}: {species} L{level} "
                         f"cannot learn {mv}")
+
+        cap = availability.max_power(key)
+        if cap is not None:
+            for species, level, moves in slots:
+                for mv in (moves or []):
+                    power = (g.moves.get(mv) or {}).get("power") or 0
+                    if power > cap:
+                        problems.append(
+                            f"{version} {key}: {species} {mv} is {power} power, "
+                            f"over the {cap} limit for this gym")
+
+        repeats = availability.max_repeats(key)
+        if repeats is not None:
+            seen = {}
+            for _species, _level, moves in slots:
+                for mv in (moves or []):
+                    seen[mv] = seen.get(mv, 0) + 1
+            for mv, n in sorted(seen.items()):
+                if n > repeats:
+                    problems.append(
+                        f"{version} {key}: {mv} appears on {n} of the team, "
+                        f"max {repeats}")
+
+        # The early gyms also get a coverage budget. Legality alone let Brock
+        # field five different super-effective answers at badge one.
+        cap = availability.budget(key)
+        if cap is not None:
+            spent = []
+            for species, _level, moves in slots:
+                own = set(g.types(species))
+                for mv in (moves or []):
+                    rec = g.moves.get(mv) or {}
+                    if (rec.get("power") or 0) <= 0:
+                        continue
+                    # Normal is not coverage, it is the filler every Pokemon
+                    # has. Only a super-effective-capable off-type move counts.
+                    if not availability.is_coverage(rec.get("type"), key, own):
+                        continue
+                    spent.append(f"{species}:{mv}")
+            if len(spent) > cap:
+                problems.append(
+                    f"{version} {key}: {len(spent)} off-type coverage moves, "
+                    f"budget {cap} ({', '.join(spent)})")
+
     return problems
 
 
@@ -184,7 +274,8 @@ def main():
 
     if args.diff:
         import luadata
-        old = luadata.load(os.path.join(REPO, "boss_teams_1.6.0.lua"))
+        old = luadata.load(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "boss_teams_1.6.0.lua"))
         for key in sorted(set(old) | set(tables["red"])):
             o = old.get(key)
             n = tables["red"].get(key)

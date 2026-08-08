@@ -42,12 +42,17 @@ at 71.
 Yellow runs a few levels apart in places. Its Brock is easier, because a Pikachu
 start has nothing for a Rock gym, and its Koga hits a little harder.
 
-Every gym team is still its own type, but they can hurt what used to wall them.
-Brock's Rhyhorn carries Thunderbolt and his Kabuto carries Ice Beam, and it's
-still six Rock Pokémon. Misty answers an Electric lead with Earthquake and Dig.
-Koga's Golbat can't be touched by Ground at all. The answers are spread around the
-team rather than saved for the ace, so switching in a counter runs into something
+Every gym team is still its own type, but the later ones can hurt what used to
+wall them. Koga's Muk carries Thunderbolt, his Weezing adds Fire Blast, and his
+Golbat can't be touched by Ground at all. The answers are spread around the team
+rather than saved for the ace, so switching in a counter runs into something
 different each time.
+
+The early gyms don't do that. Brock and Misty stick to their own type, Lt. Surge
+gets one move outside his and Erika two. Coverage arrives from Koga onward, which
+is when you've been through Celadon and can build the same kind of team yourself.
+Brock is still a wall, you just answer him with a type advantage the way the gym
+intends.
 
 Movesets are all legitimate. Nothing carries a move it couldn't have learned.
 
@@ -73,8 +78,8 @@ how many you own.
 ## Trainers that play properly
 
 The AI estimates what each move will actually do, so it picks the one that hurts
-you most instead of rolling a dice. It weighs accuracy, so it won't fish for Horn
-Drill. It heals when it's hurt rather than at full HP, and it won't set up while
+you most instead of rolling a dice. It weighs accuracy, so it won't fish for a
+low-percentage gamble. It heals when it's hurt rather than at full HP, and it won't set up while
 it's dying.
 
 Bosses also switch now. Send in a hard counter and a leader may rotate to

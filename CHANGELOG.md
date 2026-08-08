@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.7.1
+
+Early-game pass. The first gyms were unfair rather than hard.
+
+Brock had Thunderbolt, Ice Beam and Fire Blast at one badge, so every starter
+had a hard counter waiting and you have no TMs to answer with. Misty ran Ice
+Beam on four of six, which locks out the Grass starter her gym is supposed to
+be weak to. Neither has an off-type move now, Surge keeps one and Erika two.
+Koga onward is untouched: by then you've been through Celadon and can build the
+same kind of team yourself.
+
+Also on Brock and Misty, nothing goes above Body Slam any more — Earthquake and
+Surf were both in there — and Starmie loses Psychic. That was the worst of it,
+hitting a Grass starter for double while Water only managed half, so bringing
+the right counter was the wrong move.
+
+Less repetition all round. Rock Slide was on five of Brock's six, Bubblebeam on
+five of Misty's, Thunderbolt on all six of Surge's and Sleep Powder on four of
+Erika's. Nothing runs on more than three of a team now.
+
+Dig and Horn Drill are off every roster. Dig spends a turn underground for
+damage the AI overrates, and Horn Drill is a coin flip.
+
+Levels are unchanged.
+
 ## 1.7.0
 
 ### Yellow is fixed
@@ -42,10 +67,9 @@ Pokémon Tower one from 28 to 45, Silph from 43 to 53.
 ### Gym leaders can hurt you now
 
 Teams still keep their type, but they've got answers for what used to wall them.
-Brock's Rhyhorn carries Thunderbolt for the Squirtle that used to walk through
-him, and his Kabuto carries Ice Beam for the Bulbasaur. Misty answers an Electric
-lead with Earthquake and Dig. Koga's Arbok answers Ground with an Earthquake of
-its own.
+Koga's Muk carries Thunderbolt, his Weezing adds Fire Blast, and his Arbok
+answers Ground with an Earthquake of its own. (The early gyms got this too at
+first — see 1.7.1, which took it back off them.)
 
 Answers are spread around the team rather than saved for the ace, so switching in
 a counter runs into something different each time. Every moveset is still

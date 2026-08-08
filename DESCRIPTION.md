@@ -18,18 +18,21 @@ couldn't do: no illegal moves, no invented stats, no peeking at your party.
 
 ## Boss fights
 
-Brock opens with six Rock Pokémon and closes on an Onix that knows Rock Slide,
-Earthquake, Body Slam and Toxic. Sabrina's Alakazam lands at 56. Lance brings two
+Brock opens with six Rock Pokémon and closes on an Onix with Rock Slide and
+Toxic. Sabrina's Alakazam lands at 56. Lance brings two
 Dragonite, and the Champion's ace hits 71.
 
-Each team still keeps its type, and answers its own weaknesses with moves rather
-than off-theme Pokémon. Brock's Rhyhorn carries Thunderbolt for the Squirtle that
-used to walk through him; his Kabuto carries Ice Beam for the Bulbasaur. Misty's
-Poliwhirl has Earthquake and her Psyduck has Dig, so an Electric lead isn't a free
-win. Koga's Golbat can't be touched by Ground at all.
-
+Each team still keeps its type, and the later ones answer their own weaknesses
+with moves rather than off-theme Pokémon. Koga's Muk carries Thunderbolt, his
+Weezing adds Fire Blast, and his Golbat can't be touched by Ground at all.
 Answers are spread around the team instead of saved for the ace, so switching in a
 hard counter meets something different each time.
+
+The early gyms are left alone deliberately. Brock and Misty stick to their own
+type, Surge gets one move outside his, Erika two, and full coverage starts at
+Koga — the first leader you meet after Celadon, which is where you can build that
+kind of team yourself. Brock is still a wall; you just beat him with a type
+advantage the way the gym intends.
 
 Levels are tuned to where you'll actually be by the time you get there, which
 means the later gyms hit as hard as the early ones did. Yellow is tuned separately.
@@ -55,7 +58,7 @@ Vanilla Gen 1 trainers barely think. They don't estimate damage, don't look at y
 HP, and don't care whether a move is likely to land.
 
 This one does all three. It picks the move that actually does the most, values a
-finishing blow properly, doesn't gamble on Horn Drill, heals when it's hurt instead
+finishing blow properly, won't fish for a low-accuracy gamble, heals when it's hurt instead
 of at full health, and won't set up while it's dying.
 
 Bosses also switch. Send in a hard counter and a leader may rotate to something

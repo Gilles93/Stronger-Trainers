@@ -7,17 +7,27 @@ Design rules, applied to every gym team:
     Sabrina's Venomoth is the Psychic-adjacent Bug). A Water gym never
     fields a Raichu to cover its Electric weakness -- it covers that
     weakness with a Ground *move* on a Water Pokemon.
-  * Coverage answers the gym type's own weaknesses. This is the part the
-    older rosters lacked: a Rock gym whose every move is Rock or Normal is
-    walled by any Water starter, and no amount of extra levels fixes that.
-    Brock answers Water with Rhyhorn's Thunderbolt and Grass with Kabuto's
-    Ice Beam, both legal TMs, while still being eight Rock Pokemon.
+  * Coverage answers the gym type's own weaknesses -- but only from the
+    point the player could answer back. The early gyms are gated by
+    availability.py: nothing off-type at Brock or Misty, one move at Surge,
+    two at Erika, unrestricted from Koga on. 1.7.0 shipped Brock carrying
+    Thunderbolt, Ice Beam, Fire Blast, Rock Slide and Earthquake at one
+    badge, which is not a hard fight, it is a locked door.
   * Four slots each: one or two STAB, one or two coverage, at most one
     status. Coverage is spread across the team rather than stacked on the
     ace, so switching in a hard counter meets a different answer each time.
 
 Two deliberate omissions:
 
+  * Charge moves -- Dig, Sky Attack, Solarbeam, Razor Wind -- appear
+    nowhere. smart_ai scores a move on the damage Damage.compute reports,
+    and for a charge move that is the full hit with no account of the turn
+    spent winding up, so the AI rates Dig above Rock Slide and then spends
+    every other turn underground. Brock had it on three of six at 100 base
+    power, at one badge.
+  * OHKO moves likewise. smart_ai weights by accuracy, so a 30% Horn Drill
+    scores near the bottom and the slot is dead -- until the one time it
+    lands and decides the fight on a coin flip.
   * EXPLOSION and SELFDESTRUCT appear nowhere. smart_ai.lua scores them +6
     on purpose -- they are the cheese the AI is built not to play -- so
     authoring them just wastes a slot the AI will refuse to use.
@@ -36,47 +46,67 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 
 GYM_LEADERS = {
-    # Rock. Weak to Water/Grass/Fighting/Ground -- Thunderbolt and Ice Beam
-    # are the answers to the two starters that used to walk through here.
+    # Rock. Rock and Normal only, nothing over Body Slam, and no move on more
+    # than three of the six -- see availability.py. Earthquake and Dig are
+    # gone: Gen 1 has no mild Ground attack, so the Ground half of this gym is
+    # a defensive trait here rather than an offensive one, which is what
+    # vanilla does too. Rock Throw carries the middle of the team and Rock
+    # Slide is kept for Rhyhorn and the Onix.
     "OPP_BROCK#1": [
-        ("GEODUDE",   ["ROCK_SLIDE", "DIG", "BODY_SLAM", "DEFENSE_CURL"]),
-        ("SANDSHREW", ["DIG", "ROCK_SLIDE", "SWIFT", "SAND_ATTACK"]),
-        ("RHYHORN",   ["ROCK_SLIDE", "DIG", "THUNDERBOLT", "HORN_ATTACK"]),
-        ("KABUTO",    ["WATER_GUN", "ICE_BEAM", "BODY_SLAM", "HARDEN"]),
-        ("GRAVELER",  ["ROCK_SLIDE", "EARTHQUAKE", "BODY_SLAM", "FIRE_BLAST"]),
-        ("ONIX",      ["ROCK_SLIDE", "EARTHQUAKE", "BODY_SLAM", "TOXIC"]),
+        ("GEODUDE",   ["TACKLE", "BODY_SLAM", "DEFENSE_CURL"]),
+        ("SANDSHREW", ["SCRATCH", "SWIFT", "SAND_ATTACK"]),
+        ("RHYHORN",   ["ROCK_SLIDE", "HORN_ATTACK", "BODY_SLAM"]),
+        ("KABUTO",    ["SCRATCH", "HARDEN", "BODY_SLAM"]),
+        # Yellow's Brock sits two levels lower, and Rock Throw arrives at 16
+        # for the Geodude line and 19 for Onix, so Yellow falls back to the TM
+        ("GRAVELER",  {"*": ["ROCK_THROW", "TACKLE", "DEFENSE_CURL"],
+                       "yellow": ["ROCK_SLIDE", "TACKLE", "DEFENSE_CURL"]}),
+        ("ONIX",      {"*": ["ROCK_SLIDE", "ROCK_THROW", "SCREECH", "TOXIC"],
+                       "yellow": ["ROCK_SLIDE", "TACKLE", "SCREECH", "TOXIC"]}),
     ],
-    # Water. Weak to Electric/Grass. Poliwhirl's Earthquake is the Electric
-    # answer, Ice Beam the Grass one; Starmie's Psychic punishes Poison.
+    # Water. Water and Normal only. Starmie's Psychic is gone despite being
+    # its own STAB: it is 2x into the Grass/Poison starter a player brings to
+    # answer a Water gym, whose Water moves that starter already resists, so
+    # the "correct" counter was the worst possible pick. Surf went with it at
+    # 95 power. Water Gun carries the front, Bubblebeam the back, and Starmie
+    # gets Recover instead of a fourth attack -- the AI heals at most twice
+    # and only below half, so it is a longer fight rather than an unwinnable
+    # one.
     "OPP_MISTY#1": [
-        ("PSYDUCK",   ["BUBBLEBEAM", "DIG", "ICE_BEAM", "DOUBLE_TEAM"]),
-        ("SHELLDER",  ["BUBBLEBEAM", "ICE_BEAM", "SUPERSONIC", "WITHDRAW"]),
-        ("SEADRA",    ["BUBBLEBEAM", "ICE_BEAM", "TOXIC", "SMOKESCREEN"]),
-        ("POLIWHIRL", ["BUBBLEBEAM", "EARTHQUAKE", "BODY_SLAM", "HYPNOSIS"]),
+        ("PSYDUCK",   ["WATER_GUN", "SCRATCH", "BODY_SLAM", "DOUBLE_TEAM"]),
+        ("SHELLDER",  ["WATER_GUN", "TRI_ATTACK", "SUPERSONIC", "WITHDRAW"]),
+        ("SEADRA",    ["BUBBLEBEAM", "SWIFT", "TOXIC", "SMOKESCREEN"]),
+        ("POLIWHIRL", ["WATER_GUN", "BODY_SLAM", "HYPNOSIS", "DOUBLESLAP"]),
         ("STARYU",    ["BUBBLEBEAM", "SWIFT", "THUNDER_WAVE", "HARDEN"]),
-        ("STARMIE",   ["SURF", "PSYCHIC_M", "ICE_BEAM", "THUNDER_WAVE"]),
+        ("STARMIE",   ["BUBBLEBEAM", "TRI_ATTACK", "THUNDER_WAVE", "RECOVER"]),
     ],
     # Electric. Weak to Ground, which Electric moves cannot touch at all, so
     # the answers are Raichu's Submission (2x into Rock) and Electrode's
     # Toxic for anything bulky enough to sit there.
     "OPP_LT_SURGE#1": [
+        # Voltorb and Electrode have no level-up Electric attack at all, so
+        # they take the Thunderbolt; everything in the Pikachu and Magnemite
+        # lines learns Thundershock and uses that instead.
         ("VOLTORB",   ["THUNDERBOLT", "SONICBOOM", "SCREECH", "DOUBLE_TEAM"]),
-        ("PIKACHU",   ["THUNDERBOLT", "QUICK_ATTACK", "THUNDER_WAVE", "DOUBLE_TEAM"]),
-        ("MAGNEMITE", ["THUNDERBOLT", "SONICBOOM", "THUNDER_WAVE", "SWIFT"]),
-        ("ELECTRODE", ["THUNDERBOLT", "SCREECH", "TOXIC", "DOUBLE_TEAM"]),
-        ("MAGNETON",  ["THUNDERBOLT", "THUNDER_WAVE", "SWIFT", "DOUBLE_TEAM"]),
-        ("RAICHU",    ["THUNDERBOLT", "SUBMISSION", "BODY_SLAM", "THUNDER_WAVE"]),
+        ("PIKACHU",   ["THUNDERSHOCK", "QUICK_ATTACK", "THUNDER_WAVE", "SWIFT"]),
+        ("MAGNEMITE", ["THUNDERSHOCK", "SONICBOOM", "SUPERSONIC", "THUNDER_WAVE"]),
+        ("ELECTRODE", ["THUNDERBOLT", "SCREECH", "TOXIC", "SWIFT"]),
+        ("MAGNETON",  ["THUNDERSHOCK", "SWIFT", "DOUBLE_TEAM", "THUNDER_WAVE"]),
+        ("RAICHU",    ["THUNDERBOLT", "SEISMIC_TOSS", "BODY_SLAM", "AGILITY"]),
     ],
     # Grass. Weak to Fire/Ice/Poison/Flying/Bug -- the worst-covered type in
     # Gen 1, so the threat here is status: powder into Toxic, with
     # Exeggutor's Psychic as the one real coverage move on the team.
     "OPP_ERIKA#1": [
+        # Sleep Powder was on four of six, which is the whole fight decided
+        # before it starts. Two carry it now; the rest lean on Stun Spore and
+        # Toxic, which cost you the fight more slowly and more fairly.
         ("TANGELA",    ["MEGA_DRAIN", "BODY_SLAM", "STUN_SPORE", "TOXIC"]),
-        ("GLOOM",      ["MEGA_DRAIN", "SLEEP_POWDER", "ACID", "TOXIC"]),
-        ("WEEPINBELL", ["RAZOR_LEAF", "SLEEP_POWDER", "ACID", "TOXIC"]),
-        ("EXEGGUTOR",  ["PSYCHIC_M", "MEGA_DRAIN", "HYPNOSIS", "STUN_SPORE"]),
-        ("VICTREEBEL", ["RAZOR_LEAF", "SLEEP_POWDER", "ACID", "BODY_SLAM"]),
-        ("VILEPLUME",  ["MEGA_DRAIN", "SLEEP_POWDER", "ACID", "BODY_SLAM"]),
+        ("GLOOM",      ["ACID", "SLEEP_POWDER", "MEGA_DRAIN", "TOXIC"]),
+        ("WEEPINBELL", ["RAZOR_LEAF", "ACID", "STUN_SPORE", "GROWTH"]),
+        ("EXEGGUTOR",  ["PSYCHIC_M", "HYPNOSIS", "REFLECT", "LEECH_SEED"]),
+        ("VICTREEBEL", ["RAZOR_LEAF", "ACID", "BODY_SLAM", "SLEEP_POWDER"]),
+        ("VILEPLUME",  ["MEGA_DRAIN", "BODY_SLAM", "TOXIC", "STUN_SPORE"]),
     ],
     # Poison. Weak to Ground/Psychic/Bug. Golbat is outright immune to
     # Ground, Arbok answers it with Earthquake of its own, and Muk/Weezing
@@ -106,11 +136,11 @@ GYM_LEADERS = {
     # Magmar takes Rock apart with Submission.
     "OPP_BLAINE#1": [
         ("PONYTA",    ["FIRE_BLAST", "STOMP", "BODY_SLAM", "TAKE_DOWN"]),
-        ("GROWLITHE", ["FIRE_BLAST", "DIG", "BODY_SLAM", "AGILITY"]),
+        ("GROWLITHE", ["FIRE_BLAST", "TAKE_DOWN", "BODY_SLAM", "AGILITY"]),
         ("MAGMAR",    ["FIRE_BLAST", "SUBMISSION", "CONFUSE_RAY", "BODY_SLAM"]),
         ("RAPIDASH",  ["FIRE_BLAST", "STOMP", "SWIFT", "TAKE_DOWN"]),
         ("NINETALES", ["FLAMETHROWER", "CONFUSE_RAY", "TOXIC", "BODY_SLAM"]),
-        ("ARCANINE",  ["FIRE_BLAST", "DIG", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
     ],
 }
 
@@ -121,10 +151,10 @@ GYM_LEADERS = {
 
 GIOVANNI = {
     "OPP_GIOVANNI#1": [
-        ("SANDSHREW",  ["DIG", "ROCK_SLIDE", "SWIFT", "SAND_ATTACK"]),
-        ("ONIX",       ["ROCK_SLIDE", "DIG", "BODY_SLAM", "TOXIC"]),
-        ("RHYHORN",    ["ROCK_SLIDE", "DIG", "THUNDERBOLT", "HORN_ATTACK"]),
-        ("DUGTRIO",    ["DIG", "ROCK_SLIDE", "SLASH", "SAND_ATTACK"]),
+        ("SANDSHREW",  ["EARTHQUAKE", "ROCK_SLIDE", "SWIFT", "SAND_ATTACK"]),
+        ("ONIX",       ["ROCK_SLIDE", "EARTHQUAKE", "BODY_SLAM", "TOXIC"]),
+        ("RHYHORN",    ["ROCK_SLIDE", "EARTHQUAKE", "THUNDERBOLT", "HORN_ATTACK"]),
+        ("DUGTRIO",    ["EARTHQUAKE", "ROCK_SLIDE", "SLASH", "SAND_ATTACK"]),
         ("PERSIAN",    ["BITE", "BODY_SLAM", "THUNDERBOLT", "SCREECH"]),
         ("KANGASKHAN", ["BODY_SLAM", "EARTHQUAKE", "MEGA_PUNCH", "TAIL_WHIP"]),
     ],
@@ -141,8 +171,8 @@ GIOVANNI = {
         ("MAROWAK",   ["EARTHQUAKE", "BONEMERANG", "ICE_BEAM", "BODY_SLAM"]),
         ("PERSIAN",   ["SLASH", "BODY_SLAM", "BUBBLEBEAM", "SCREECH"]),
         ("NIDOQUEEN", ["EARTHQUAKE", "ICE_BEAM", "THUNDERBOLT", "BODY_SLAM"]),
-        ("NIDOKING",  ["EARTHQUAKE", "ICE_BEAM", "THUNDERBOLT", "HORN_DRILL"]),
-        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "HORN_DRILL"]),
+        ("NIDOKING",  ["EARTHQUAKE", "ICE_BEAM", "THUNDERBOLT", "BODY_SLAM"]),
+        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
     ],
 }
 
@@ -200,23 +230,23 @@ CHAMPION_RB = {
     1: [  # player chose Charmander -> rival carries Blastoise
         ("PIDGEOT",   ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
-        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "HORN_DRILL"]),
-        ("ARCANINE",  ["FIRE_BLAST", "DIG", "BODY_SLAM", "TAKE_DOWN"]),
+        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
         ("EXEGGUTOR", ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "STUN_SPORE"]),
         ("BLASTOISE", ["SURF", "BLIZZARD", "BODY_SLAM", "EARTHQUAKE"]),
     ],
     2: [  # Squirtle -> Venusaur
         ("PIDGEOT",  ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM", ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
-        ("RHYDON",   ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "HORN_DRILL"]),
+        ("RHYDON",   ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
         ("GYARADOS", ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "HYPER_BEAM"]),
-        ("ARCANINE", ["FIRE_BLAST", "DIG", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE", ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
         ("VENUSAUR", ["RAZOR_LEAF", "SLEEP_POWDER", "BODY_SLAM", "MEGA_DRAIN"]),
     ],
     3: [  # Bulbasaur -> Charizard
         ("PIDGEOT",   ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
-        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "HORN_DRILL"]),
+        ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
         ("EXEGGUTOR", ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "STUN_SPORE"]),
         ("GYARADOS",  ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "HYPER_BEAM"]),
         ("CHARIZARD", ["FIRE_BLAST", "EARTHQUAKE", "SLASH", "SWORDS_DANCE"]),
