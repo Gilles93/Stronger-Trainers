@@ -1,7 +1,7 @@
 {
   "id": "stronger_trainers",
   "name": "Stronger Trainers",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -16,6 +16,6 @@
   "conflicts": [],
   "incompatible": [],
   "experimental": false,
-  "description": "Gym leaders, the Elite Four, the Champion, the rivals and Giovanni field full six-Pokemon teams with hand-picked movesets and a smarter, fair-play AI that estimates damage and weighs accuracy; gym battles let you pick the format and your team; every ordinary trainer gets a level bump and stops fielding pre-evolutions their level has long outgrown. Experience gain is trimmed to match. All adjustable from the MODS menu.",
+  "description": "Gym leaders, the Elite Four, the Champion, the rivals and Giovanni field full six-Pokemon teams with real type coverage, on a level curve computed from the experience a playthrough actually banks rather than guessed at. Bosses switch to answer a bad matchup, and a fair-play AI estimates damage and weighs accuracy. Red, Blue and Yellow each get their own rosters, so Yellow's rival fights his own Eevee line at the right levels. Every ordinary trainer gets a level bump and stops fielding pre-evolutions its level has outgrown. All adjustable from the MODS menu.",
   "github": "Gilles93/Stronger-Trainers"
 }

@@ -1,0 +1,5 @@
+.romdata/
+.engine/
+__pycache__/
+*.pyc
+venv/

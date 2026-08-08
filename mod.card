@@ -1,24 +1,29 @@
 -- Sharing metadata: read by tooling and the manager detail pane, never by
 -- the loader's merge.
 return {
-  summary = "Full six-Pokemon boss teams with real movesets, plus a level bump for every other trainer.",
+  summary = "Full six-Pokemon boss teams with real type coverage on a computed level curve, for Red, Blue and Yellow.",
   author = "starvingindiedev",
   tags = { "balance", "difficulty", "trainers", "data-only" },
   differences = {
     changed = {
-      "the eight gym leaders each field six Pokemon instead of two to five",
+      "the eight gym leaders each field six Pokemon instead of two to five, with coverage moves for the types that used to wall them",
       "the Elite Four and the Champion field six, with coverage movesets",
       "every rival battle from Route 22 onward is filled out; the lab battle stays one-on-one",
+      "boss levels are computed from the experience a playthrough actually banks, per version, instead of set by hand",
+      "Yellow gets its own rosters: its rival party indices are laid out differently, and his team is the Eevee line",
+      "bosses switch Pokemon to answer a bad type matchup, capped per fight",
       "Giovanni's three fights and the Celadon Chief field six",
       "every other trainer's levels rise by a configurable percentage",
-      "parties shorter than the configured minimum are padded with the trainer's own species",
+      "parties shorter than the configured minimum are padded with a different Pokemon of the same type, drawn from what is catchable in the wild at that point",
     },
     added = {
       "MODS menu rows: BOSS TEAMS, BOSS MOVESETS, BOSS LEVEL BONUS, TRAINER LEVEL %, MIN PARTY SIZE",
+      "MODS menu rows: BOSS SWITCHING, SWITCHES PER FIGHT and PAD WITH VARIETY",
     },
     known = {
       "rosters are rewritten as each battle starts, so data.trainers still reads vanilla -- a mod that inspects trainer data outside battle (a rematch level warning, say) sees the original levels",
       "prize money in gen 1 scales with the last Pokemon's level, so richer trainers are an expected side effect",
+      "the level curve is computed for the default option values; raising TRAINER LEVEL % well above 15 makes you outpace it again, and BOSS LEVEL BONUS is the dial that answers that",
     },
   },
   credits = {

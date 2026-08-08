@@ -1,255 +1,191 @@
 # Stronger Trainers
 
-Gym leaders, the Elite Four, the Champion, the rivals and Giovanni field full
-six-Pokémon teams with hand-picked movesets. Every other trainer keeps its own
-species but gets a level bump and a padded-out party.
+A difficulty mod for the Gen 1 recomp. Gym leaders, the Elite Four, the Champion,
+Giovanni and the rivals field six Pokémon with hand-picked movesets and real type
+coverage. Everyone else gets a level bump and a fuller party.
 
-Drop this folder into your `mods/` directory, or import the zip from the
-launcher. New mods are enabled by default, so restart and it's live. There's a
-fuller write-up in `DESCRIPTION.md`, including where `mods/` lives for each way
-of launching the game.
+Red, Blue and Yellow are all supported, each with its own rosters.
 
-## What changed
+## Install
 
-39 authored rosters covering 204 slots. Every gym leader that had fewer than six
-Pokémon now has six, and so do the Elite Four, the Champion, Giovanni's three
-fights and the Celadon Chief.
+Drop the folder into your `mods/` directory, or import the zip from the launcher.
+Mods are on by default, so restart and it's live.
 
-| Leader | Vanilla | Now |
+`mods/` isn't in the same place for both ways of launching:
+
+| Launching with | Mods folder |
+| --- | --- |
+| `gen1recomp.exe` | `%APPDATA%\pokemon-love2d\mods` |
+| `love.exe` and a source folder | `%APPDATA%\LOVE\pokemon-love2d\mods` |
+
+A fused LÖVE binary drops the `LOVE\` segment, so those are two separate folders
+with separate mod sets. Install to both if you use both. On macOS and Linux the
+roots are `~/Library/Application Support/` and `~/.local/share/`.
+
+## Boss teams
+
+39 rosters covering the eight leaders, the Elite Four, the Champion, Giovanni's
+three fights and every rival battle.
+
+| Leader | Red / Blue | Yellow |
 | --- | --- | --- |
-| Brock | Geodude 12, Onix 14 | Geodude 14, Sandshrew 14, Rhyhorn 15, Kabuto 16, Graveler 16, Onix 19 |
-| Misty | Staryu 18, Starmie 21 | Psyduck 20, Horsea 20, Shellder 21, Staryu 21, Poliwhirl 22, Starmie 24 |
-| Lt. Surge | 3 mons, ace 24 | Voltorb 22, Pikachu 22, Magnemite 23, Electrode 25, Magneton 25, Raichu 27 |
-| Erika | 3 mons, ace 29 | Weepinbell 28, Gloom 28, Tangela 29, Exeggcute 29, Victreebel 31, Vileplume 32 |
-| Koga | 4 mons, ace 43 | Koffing 41, Golbat 42, Venomoth 43, Arbok 44, Muk 44, Weezing 46 |
-| Sabrina | 4 mons, ace 43 | Mr. Mime 42, Venomoth 42, Kadabra 43, Hypno 44, Exeggutor 44, Alakazam 46 |
-| Blaine | 4 mons, ace 47 | Ponyta 44, Growlithe 45, Magmar 46, Rapidash 47, Ninetales 47, Arcanine 50 |
-| Giovanni | 5 mons, ace 50 | Dugtrio 47, Marowak 48, Persian 49, Nidoqueen 50, Nidoking 51, Rhydon 53 |
+| Brock | Geodude 14, Sandshrew 14, Rhyhorn 15, Kabuto 16, Graveler 16, Onix 19 | ace 17 |
+| Misty | Psyduck 23, Shellder 23, Seadra 24, Poliwhirl 25, Staryu 25, Starmie 28 | same |
+| Lt. Surge | Voltorb 30, Pikachu 30, Magnemite 31, Electrode 32, Magneton 32, Raichu 35 | same |
+| Erika | Tangela 38, Gloom 38, Weepinbell 39, Exeggutor 40, Victreebel 40, Vileplume 43 | same |
+| Koga | Koffing 45, Golbat 45, Venomoth 46, Arbok 47, Muk 47, Weezing 50 | ace 51 |
+| Sabrina | Mr. Mime 51, Venomoth 51, Kadabra 52, Hypno 53, Exeggutor 53, Alakazam 56 | same |
+| Blaine | Ponyta 55, Growlithe 55, Magmar 56, Rapidash 57, Ninetales 57, Arcanine 60 | ace 59 |
+| Giovanni | Dugtrio 56, Marowak 56, Persian 57, Nidoqueen 58, Nidoking 58, Rhydon 61 | same |
 
-Lance closes on two Dragonite, at 63 and 65. The Champion's ace reaches 68. Full
-Elite Four tables are in `DESCRIPTION.md`.
+Then Lorelei 67, Bruno 67, Agatha 68, Lance 69 on two Dragonite, and the Champion
+at 71.
 
-Rival battles scale with your own roster rather than jumping straight to six.
-The Oak's-lab battle deliberately stays one-on-one, since you own a single level
-5 starter there and a filled party would be unwinnable rather than hard. Route
-22 gets three, Cerulean five, and everything from the S.S. Anne onward six.
+Yellow's Brock is easier on purpose. Yellow starts you on a Pikachu that a Rock
+gym walls outright, and the game itself compensates: vanilla Yellow's Brock is
+10/12 where Red's is 12/14.
 
-Movesets are Gen 1 legal. All 204 slots were checked against the ROM's own
-learnset and TM/HM tables, including moves inherited from a pre-evolution, so a
-Graveler really can carry the Rock Throw it picked up as a Geodude. Nothing has
-a move it couldn't legitimately know at that level, and nothing is a stat-stick
-with no attack.
+Movesets are Gen 1 legal. All of them are checked against the ROM's own learnsets
+and TM lists, pre-evolution moves included, so a Graveler can carry the Rock
+Throw it picked up as a Geodude.
+
+## Type coverage
+
+Every gym team is still its own type. What changed is that they can hurt the
+things that used to wall them. Brock's Rhyhorn carries Thunderbolt and his Kabuto
+carries Ice Beam, both legal TMs, and it's still six Rock Pokémon. Misty answers
+Electric with Earthquake on Poliwhirl and Dig on Psyduck. Koga's Golbat ignores
+Ground outright and his Arbok answers it with an Earthquake of its own.
+
+Coverage is spread across the team instead of stacked on the ace, so switching in
+a counter runs into a different answer each time.
+
+## Levels
+
+Boss levels are calculated rather than chosen. This mod raises every ordinary
+trainer by 15%, pads short parties and evolves overdue pre-evolutions, so you
+bank far more experience than vanilla hands out, and that compounds: a bigger
+payout raises your level, which raises the payout of the next fight. Setting
+bosses to vanilla plus a few levels, which is what earlier versions did, is why
+the later gyms kept going soft.
+
+So the route order gets walked instead. Every trainer is paid out at this mod's
+own settings using the game's experience formula, and the growth curve is
+inverted to find the level you'll actually be standing there. Each boss sits
+above that by a margin that ramps from +2 at Brock to +14 at the Champion.
+Yellow is calculated separately, because its trainers and its experience economy
+aren't Red's.
+
+No fight is ever below what that version already fielded. That mattered more than
+expected: vanilla Yellow's Koga, Sabrina, Blaine and Giovanni were all *higher*
+than the levels this mod used to give them, so Yellow players were getting weaker
+leaders than the unmodded game.
+
+The curve assumes the default option values and that you fight most of what you
+walk past. Push `TRAINER LEVEL %` well past 15 and you'll outpace it again;
+`BOSS LEVEL BONUS` is the dial for that.
 
 ## Gym battle formats
 
-Before you have a gym's badge, talking to the leader runs their dialogue, then a
-"How many POKéMON each?" prompt, then the team picker, then the battle.
+Before you have a gym's badge, talking to the leader lets you pick how many
+Pokémon they bring, 2 through 6. Your own party is narrowed to match for the
+fight and put back afterwards. The leader's ace is always in there.
 
-The number is how many the leader brings. It draws from its six with the ace
-always included and the rest at random, so even a 2v2 against Brock means facing
-that level 19 Onix.
+The range is always the full 2 to 6, because the number is how many the *leader*
+brings, not how many you own.
 
-You then pick your own side from the party screen, one at a time in send-out
-order, so your first pick leads. Each round lists only the Pokémon still
-unpicked, and B undoes your last pick or backs out of the encounter entirely on
-the first one.
+## Bosses switch
 
-- The picker always runs 2 to 6 whatever the size of your party, and Up and Down
-  roll around inside that range. Pick 6 with five Pokémon and it's your five
-  against their six. Being outnumbered is a legitimate fight, and it means you
-  never have to carry a full party just to face a full team. Your side is capped
-  at what you can actually field.
-- B backs out of the whole encounter from the format picker or your first pick,
-  so you can always leave to heal.
-- The pick screen only appears when there's a team to choose. If the format takes
-  everything you have standing, whether that's 6v6 with five Pokémon or 3v3 with
-  three, the set is forced and it goes straight to the battle in party order.
-- Only the badge-earning fight offers the choice. Once you hold the badge the
-  leader's dialogue is exactly vanilla, TM re-give included.
-- Nothing compensates for the format. A 2v2 really is a quicker, swingier fight
-  and 6v6 the full slog. It's a preference knob, not a difficulty setting.
-- Losing blacks you out as Gen 1 would, even with healthy Pokémon in reserve.
+No Gen 1 trainer switches on purpose. The game's own routine grabs the first
+unfainted Pokémon whatever the matchup, and only a few classes even roll for it.
+Bosses now switch to whichever of their team the matchup favours.
 
-## Smarter boss AI
+It plays off what you can see, species types on both sides, never your move list
+or your stats. The turn it costs is the trade: you get a free move every time a
+boss rotates. There's a cap per fight, a turn of grace after every send-out so it
+can't ping-pong, and it won't switch away from a Pokémon that can already finish
+you. It won't rotate out of a matchup it's winning either.
 
-Gen 1's trainer AI scores each move from a base of 10 and picks the lowest. All
-three vanilla passes together only discourage a status move that would fail,
-nudge a few effects on one turn, and add or subtract 1 for type effectiveness.
-Nothing estimates damage, reads HP, or weighs accuracy.
+This is the most opinionated thing in the mod, so it has its own row.
+`BOSS SWITCHING` off gives you exact vanilla behaviour.
 
-This adds a fourth scoring pass:
+## Ordinary trainers
 
-- Damage and KO detection through the game's own formula, so a 120-power neutral
-  move stops losing to a 40-power super-effective one, and a move that finishes
-  your Pokémon gets taken.
-- Accuracy weighting, valuing expected damage rather than raw power, so it stops
-  gambling on Horn Drill and Blizzard when a reliable move wins. This sometimes
-  makes the AI easier, which is correct.
-- Self-preservation. It won't set up while it's dying, and it heals when
-  genuinely hurt, at most twice per Pokémon and only below half HP, so it can't
-  Recover-stall you. Sabrina has two Recover users and still only gets four
-  heals in total.
-- Sensible status use. It won't re-paralyse or re-sleep, and it won't waste a
-  status move on a target that already has one.
+Levels go up by a configurable percentage. Parties shorter than `MIN PARTY SIZE`
+get filled out with a *different* Pokémon sharing one of the trainer's types, so
+a lone-Onix Hiker brings a Rhyhorn and a Geodude rather than a second Onix.
 
-It plays fair. It reads your HP at the resolution of the on-screen HP bar, 48
-pixels wide, and never looks at your move list, stats or DVs. It knows what
-someone sitting opposite could see.
+Only Pokémon that turn up in wild encounter tables are eligible, which is a
+data-side way of saying "something he could have caught". No fossil, game corner
+prize, gift Pokémon or legendary appears in a single wild table in Gen 1, so that
+one rule keeps all of them out. Picks favour the closest type match and skip
+anything whose earliest wild appearance is well above that trainer's level, so a
+level 12 Youngster can't open with a Tauros.
 
-Some tactics are deliberately excluded because they make Gen 1 miserable rather
-than hard: re-sleeping a sleeping target, chasing Blizzard freezes, Wrap and
-Fire Spin lock-outs, the Hyper Beam no-recharge-on-KO trick, and Explosion spam.
-Each is suppressed explicitly rather than just left unrewarded, so a future
-scoring tweak can't quietly reintroduce it.
-
-It defaults to on, bosses only, so route trainers stay as dumb as Gen 1
-intended. `SMART AI FOR = EVERYONE` turns it on for all 47 trainer classes.
-
-### It composes with Modern Kanto
-
-If you have Modern Kanto, turn its `SMART AI` on too. It ships off by default,
-and the two do different jobs. Modern Kanto patches the vanilla `LAYER_3` so
-type effectiveness multiplies dual types out properly, while this registers a
-separate layer id and references it from each trainer's `aiMods`, so both run
-additively and neither overwrites the other. Patching `LAYER_3` here would have
-silently thrown Modern Kanto's work away.
+The same trainer always brings the same Pokémon. A trainer who fielded something
+different on every encounter would look broken rather than varied.
 
 ## Overdue pre-evolutions
 
-Gen 1 is careless about this: 212 of its 999 trainer party slots are already
-past their own evolution level before this mod raises anything, and the level
-bump takes that to 326. Ordinary trainers now field the stage their level has
-actually earned. A level 16 Bulbasaur is an Ivysaur, a level 32 one is a
-Venusaur, and a Bug Catcher's level 13 Caterpie shows up as a Butterfree that
-knows Confusion. Chains run to completion rather than stopping a stage short.
+Gen 1 leaves trainers holding pre-evolutions long past the level they'd have
+evolved at. 212 of the 999 vanilla party slots are already overdue before this
+mod touches anything, and the level bump takes that to 326. Ordinary trainers now
+get the stage their level has earned, so a level 16 Bulbasaur is an Ivysaur.
 
-The evolved form brings its own level-up moveset with it, which is a bigger
-jump than the base stats alone. Route 3 in particular gets noticeably meaner.
-
-Stone evolutions carry no level in Gen 1, so `STONE EVO FROM LV` supplies one.
-It defaults to 30, taking a late Pikachu to Raichu and a Gloom to Vileplume. Set
-it to 0 to leave stone users alone.
-
-Evolution lines are read from the merged Pokémon data, not a private table, so
-other mods' evolution edits apply for free. With **All Pokémon Catchable 151**
-(from DarkLinkDuck) installed, its trade-evolution fixes (Kadabra, Graveler and
-Haunter at 42, Machoke at 45) reach trainers too.
-
-The 39 authored rosters are exempt, since their stages are chosen by hand.
-Evolving them would take Lance from two Dragonite to four and hand Blaine a
+The 39 authored boss rosters are exempt. Their stages are picked by hand, and
+evolving them would take Lance from two Dragonite to four and give Blaine a
 second Rapidash.
 
-## Slowing experience down
+## Experience
 
-Everything above makes trainers pay out more: they field more Pokémon, at
-higher levels, and evolved forms are worth more experience than the pre-evos
-they replace. Left alone, that hands a good chunk of the added difficulty back
-to you in free levels.
+`XP GAIN %` trims the payout, 75% out of the box. Bigger, evolved parties are
+worth more experience in Gen 1, and without this you'd level faster than vanilla
+while fighting harder trainers. Stat experience is left alone, so a Pokémon
+levels more slowly but is exactly as strong at a given level.
 
-`XP GAIN %` is the counterweight, and it ships at **75**, so you keep three
-quarters of what Gen 1 would have paid. Set it to 100 to turn it off entirely,
-or as low as 25 if you want the game to last a very long time.
+It multiplies with other experience mods rather than overriding them. QoL
+Toggles' `EXP x2` against 50% here is simply the normal rate.
 
-It applies to every battle, trainer and wild alike, and it scales the "gained N
-EXP" message along with the total, so the text never disagrees with what you
-actually got. A Pokémon that fought always earns at least 1 point, however far
-you turn it down.
+## Options
 
-Stat experience is deliberately untouched. You level more slowly, but each
-Pokémon is exactly as strong at a given level as it would normally be, so this
-lengthens the game rather than quietly weakening your team.
-
-It composes with other experience mods rather than overriding them. If you run
-QoL Toggles with `EXP x2` on, that doubling and this reduction multiply out, so
-`EXP x2` with `XP GAIN %` at 50 is simply the normal rate.
-
-## Tuning it while you play
-
-Eleven rows under MODS > Stronger Trainers. They read live, so a change applies
-to the very next battle with no restart.
+Fourteen rows under MODS > Stronger Trainers. They read live, so a change applies
+to the next battle without a restart.
 
 | Row | Default | What it does |
 | --- | --- | --- |
-| `BOSS TEAMS` | ON | Off reverts bosses to their vanilla rosters and gives them the ordinary level bump instead |
-| `BOSS MOVESETS` | ON | Off keeps the six-mon teams but lets the engine pick each mon's normal level-up moves |
-| `GYM FORMAT CHOICE` | ON | Off skips the format picker; gym battles go straight to the full six |
-| `SMART AI` | ON | The extra scoring layer described above |
-| `SMART AI FOR` | BOSSES | Set to EVERYONE to extend it to all 47 trainer classes |
-| `BOSS LEVEL BONUS` | 0 | Adds flat levels on top of the authored boss levels, up to +20 |
-| `TRAINER LEVEL %` | 15 | Level bump for every non-boss trainer. 0 leaves them alone |
-| `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this, reusing the trainer's own species |
-| `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers' Pokémon up to the stage their level has earned |
-| `STONE EVO FROM LV` | 30 | The level a stone evolution counts from. 0 leaves stone users on their pre-evo |
-| `XP GAIN %` | 75 | Percentage of the normal experience payout. 100 turns it off, 50 halves it |
+| `BOSS TEAMS` | ON | Off reverts bosses to vanilla rosters with the ordinary level bump |
+| `BOSS MOVESETS` | ON | Off keeps the six-mon teams but uses each Pokémon's normal level-up moves |
+| `GYM FORMAT CHOICE` | ON | Off skips the picker; gym battles go straight to six |
+| `SMART AI` | ON | Damage and accuracy weighting on top of the vanilla AI |
+| `SMART AI FOR` | BOSSES | EVERYONE extends it to all 47 trainer classes |
+| `BOSS SWITCHING` | ON | Bosses rotate to answer a bad matchup. Off is vanilla |
+| `SWITCHES PER FIGHT` | 2 | How often one boss may rotate. 0 is the same as off |
+| `BOSS LEVEL BONUS` | 0 | Flat levels on top of the calculated ones, up to +20 |
+| `TRAINER LEVEL %` | 15 | Level bump for non-boss trainers. 0 leaves them alone |
+| `MIN PARTY SIZE` | 3 | Pads short ordinary parties up to this |
+| `PAD WITH VARIETY` | ON | Off pads with copies of the trainer's own Pokémon instead |
+| `EVOLVE PRE-EVOS` | ON | Walks ordinary trainers up to the stage their level earned |
+| `STONE EVO FROM LV` | 30 | Level a stone evolution counts from. 0 leaves them alone |
+| `XP GAIN %` | 75 | Percentage of the normal payout. 100 turns it off |
 
-If the early game bites too hard, drop `TRAINER LEVEL %` to 10 and `MIN PARTY
-SIZE` to 2, or turn `EVOLVE PRE-EVOS` off for the Bug Catcher stretch. If you
-want a real wall, `BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` 25.
+Too much early on? Drop `TRAINER LEVEL %` to 10 and `MIN PARTY SIZE` to 2, or
+turn `EVOLVE PRE-EVOS` off for the Bug Catcher stretch. Want a wall?
+`BOSS LEVEL BONUS` +5 with `TRAINER LEVEL %` 25.
 
-## Worth knowing
+## Notes
 
-- Prize money goes up. Gen 1 pays out base money times the last Pokémon's level,
-  so higher-level trainers are richer. That's the vanilla formula, not something
-  this mod touches.
-- Experience would go up a little too, for the same reason. Gen 1 pays
-  experience off the defeated Pokémon's base experience, and evolved forms are
-  worth more. `XP GAIN %` is set to 75 out of the box to offset exactly that.
-- Rosters are rewritten as each battle starts, so `data.trainers` still reads
-  vanilla outside battle. A mod that inspects trainer data ahead of time, like
-  Trainer Rematch's level-gap warning, will quote the original levels. The
-  battle itself is correct.
-- It stacks with other trainer mods rather than fighting them. Non-boss parties
-  get the level treatment applied to whatever the other mod produced.
-- No save changes. Your file works with or without this mod, and disabling it
-  mid-playthrough is safe.
+- Prize money goes up. Gen 1 pays base money times the last Pokémon's level, so
+  higher-level trainers are richer. That's the vanilla formula.
+- Rosters are built as each battle starts, so `data.trainers` still reads vanilla
+  outside battle. A mod that checks trainer data ahead of time, like Trainer
+  Rematch's level-gap warning, will quote the original levels. The battle itself
+  is correct.
+- Explosion, Selfdestruct and the trapping moves aren't authored anywhere. The AI
+  scores them down on purpose, so a slot spent on one is a slot wasted.
+- Modern Kanto works alongside this. Turn its `SMART AI` on too; both layers run.
 
-## How it works
-
-Most of it happens in the `trainer.party` hook the battle builder offers just
-after it picks a roster and before it instantiates any Pokémon
-(`src/battle/BattleState.lua:670`).
-
-The registry route (`mod.content.trainers:patch`) can't carry movesets. The
-battle builder honours a `moves` list on a party slot
-(`BattleState.lua:689`), but the `trainers` schema declares a slot as
-`{ level, species }` and validates nested records strictly
-(`Schemas.lua:177-185`), so a `moves` key in a patch is a hard load error at api
-2. The hook is the only door custom sets fit through, and it's also what makes
-the options read live and lets the mod compose with others.
-
-`boss_teams.lua` is generated, not hand-written. The authoring source and its
-validator live outside the mod, and the generator refuses to emit a roster
-containing an unknown species, an unknown move, a move that species cannot learn
-at that level, a party over six, or a slot over four moves.
-
-## Verified against
-
-gen1recomp 0.1.72 (`gen1recomp-0.1.72-windows`)
-
-- Rosters: boss teams resolving to six with the right aces and move lists, the
-  lab battle staying 1v1, ordinary parties scaling and padding, six-mon parties
-  not growing past six, the level clamp at 100, and the input party table never
-  being mutated.
-- Evolutions: both sides of the exact boundary (a level 19 Magikarp stays, a
-  level 20 becomes Gyarados), two-step chains completing, species with no
-  evolutions and species the build doesn't carry falling through untouched,
-  stone evolutions firing only at or above the configured level and never at 0,
-  trade rows never firing on their own, Eevee resolving to one eeveelution and
-  the same one every call, padded copies matching the evolved slot, and all 39
-  authored rosters coming back with their exact species lists.
-- Formats: a talk override on all 8 gyms, the ace present at every format across
-  240 random rolls, exact counts, picks ordered lead to ace, the picker offering
-  2 to 6 whatever your party size, never reaching 1 over 30 presses, and wrapping
-  at both ends.
-- Party safety: the party table keeping its identity, the battle party landing in
-  pick order rather than party order, every Pokémon returning to its original
-  index afterwards, the same objects coming back rather than copies, fainted
-  Pokémon never being selected, restore being idempotent, and a one-Pokémon party
-  surviving intact.
-- Smart AI: registered under its own id and referenced from all 47 trainer
-  classes, since a registered but unreferenced layer would never run. Brock keeps
-  his original `aiMods`, `LAYER_3` is left intact, and each scoring rule is
-  asserted exactly.
+Built against gen1recomp 0.1.72 and the 0.1.75 update, with data from Red, Blue
+and Yellow ROMs.
 
 ## Licence
 

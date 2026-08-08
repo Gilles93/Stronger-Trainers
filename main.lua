@@ -106,14 +106,18 @@ local function evolvedSpecies(lookup, species, level, stoneLevel)
 end
 
 -- Ordinary trainers: same species, levels raised by `pct`, then padded up to
--- `minSize` by cycling back through the trainer's own mons -- a Bug Catcher
--- gains another Caterpie rather than something off-theme, and the copies come
--- from the front of the list so the ace stays the ace.
+-- `minSize`.
+--
+-- Padding used to cycle back through the trainer's own mons, so a Bug Catcher
+-- gained a second Caterpie.  On theme, but it read as a duplication bug rather
+-- than a roster.  `pad` now supplies a DIFFERENT species sharing one of the
+-- trainer's types; the copy is still the fallback for any build where no such
+-- species can be found, or where the player has turned variety off.
 --
 -- `evolve` runs after the bump and before the padding, so a padded copy is a
 -- copy of the evolved slot and the two never disagree.  It is nil when the
 -- player has the option off.
-local function scaleParty(party, pct, minSize, evolve)
+local function scaleParty(party, pct, minSize, evolve, pad)
   local out = {}
   for i, slot in ipairs(party) do
     local level = slot.level or 1
@@ -134,12 +138,33 @@ local function scaleParty(party, pct, minSize, evolve)
   local original = #out
   if original > 0 then
     local target = math.min(minSize, MAX_PARTY)
+    -- Two separate sets, and the distinction matters.  `taken` grows as slots
+    -- are added, so padding never repeats a species.  `theme` is frozen from
+    -- the trainer's OWN Pokemon and never grows -- otherwise each pick widens
+    -- the pool for the next one, and a Hiker whose Onix was joined by an
+    -- Omanyte (Rock/Water, on theme) would find Water on theme too and end up
+    -- fielding a Wartortle.
+    local taken, theme = {}, {}
+    for i = 1, original do
+      if out[i].species then
+        taken[out[i].species] = true
+        theme[#theme + 1] = out[i].species
+      end
+    end
     local pick = 0
     while #out < target do
       pick = pick % original + 1
       local src = out[pick]
       local copy = {}
       for k, v in pairs(src) do copy[k] = v end
+      local species = pad and pad(#out + 1, copy.level, taken, theme)
+      if species then
+        copy.species = species
+        taken[species] = true
+        -- a different species does not inherit the original's move list;
+        -- the engine fills in its own level-up set
+        copy.moves = nil
+      end
       out[#out + 1] = copy
     end
   end
@@ -182,6 +207,29 @@ local function loadSibling(mod, name, what)
   return value
 end
 
+-- Which game this process is running, and therefore which roster table to
+-- read.  This is the fix for the bug 1.6.0 shipped with.
+--
+-- Party indices are NOT the same across versions.  Red and Blue give
+-- OPP_RIVAL1 nine parties -- three battles times three starter counter-picks
+-- -- while Yellow gives it three, one per battle, because his Eevee has no
+-- counter-pick to make.  So Yellow's OPP_RIVAL1#2 and #3 are the Route 22 and
+-- Cerulean fights, exactly where a shared table holds "the lab battle, but
+-- the player chose a different starter": one level 6 starter, three times
+-- over, which is precisely what players reported.  The full mapping is
+-- documented on Commands.rival_battle.
+--
+-- Guarded: a build old enough to lack GameVersion is a Red build by
+-- definition, and a missing optional module should not stop the mod loading.
+local function gameVersion()
+  local ok, GameVersion = pcall(require, "src.core.GameVersion")
+  if ok and type(GameVersion) == "table" and type(GameVersion.get) == "function" then
+    local got, id = pcall(GameVersion.get)
+    if got and type(id) == "string" and id ~= "" then return id end
+  end
+  return "red"
+end
+
 -- Which format the player picked for the gym battle now starting; shared with
 -- gym_formats.lua.  `count` nil means an ordinary full-roster battle.
 local formatState = { class = nil, count = nil, snapshot = nil }
@@ -214,7 +262,20 @@ local function trimToFormat(team, count)
 end
 
 return function(mod)
-  local BOSS_TEAMS = loadSibling(mod, "boss_teams.lua", "boss teams") or {}
+  -- boss_teams.lua is { red = {...}, blue = {...}, yellow = {...} }.  An
+  -- unrecognised version falls back to Red rather than to nothing: a build
+  -- reporting something new should still get a hard game, and Red's table is
+  -- the one whose party layout the other two are closest to.
+  local ALL_TEAMS = loadSibling(mod, "boss_teams.lua", "boss teams") or {}
+  local VERSION = gameVersion()
+  local BOSS_TEAMS = ALL_TEAMS[VERSION] or ALL_TEAMS.red or {}
+  if not ALL_TEAMS[VERSION] then
+    mod.log:warn("no boss rosters for game version %q; using the Red table",
+                 tostring(VERSION))
+  else
+    mod.log:info("boss rosters loaded for %s (%d parties)", VERSION,
+                 (function() local n = 0 for _ in pairs(BOSS_TEAMS) do n = n + 1 end return n end)())
+  end
 
   mod.options:define({
     { key = "boss_teams", label = "BOSS TEAMS", type = "toggle", default = true },
@@ -225,12 +286,22 @@ return function(mod)
     { key = "smart_ai_scope", label = "SMART AI FOR", type = "choice",
       default = "bosses", choices = { { "BOSSES", "bosses" },
                                       { "EVERYONE", "all" } } },
+    -- The most opinionated row in the mod: no Gen 1 trainer rotates on
+    -- purpose, so it gets its own toggle rather than riding SMART AI.
+    { key = "boss_switching", label = "BOSS SWITCHING", type = "toggle",
+      default = true },
+    { key = "boss_switch_cap", label = "SWITCHES PER FIGHT", type = "number",
+      default = 2, min = 0, max = 5, step = 1 },
     { key = "boss_bonus", label = "BOSS LEVEL BONUS", type = "number",
       default = 0, min = 0, max = 20, step = 1 },
     { key = "trainer_levels", label = "TRAINER LEVEL %", type = "number",
       default = 15, min = 0, max = 50, step = 5 },
     { key = "min_party", label = "MIN PARTY SIZE", type = "number",
       default = 3, min = 1, max = 6, step = 1 },
+    -- off restores the old behaviour: padding with copies of what the
+    -- trainer already fields
+    { key = "pad_variety", label = "PAD WITH VARIETY", type = "toggle",
+      default = true },
     { key = "evolve_pre_evos", label = "EVOLVE PRE-EVOS", type = "toggle",
       default = true },
     -- 0 leaves stone users alone; the row only matters with the toggle on
@@ -258,9 +329,188 @@ return function(mod)
     return nil
   end
 
+  -- ------------------------------------------------------ padding with variety
+  --
+  -- A short party is filled out with a different species that shares one of
+  -- the trainer's own types, rather than a second copy of what he already
+  -- has.  Three data-driven rules keep the picks feeling native, with no
+  -- hand-maintained tables:
+  --
+  --   * only species that appear in a WILD ENCOUNTER table are eligible,
+  --     which is a data-side way of saying "something he could have caught".
+  --     That excludes the fossils, the game-corner prizes, the gift Pokemon
+  --     and every legendary without this file naming one of them.
+  --   * only base stages go in the pool; the pick is then walked up its own
+  --     line to the slot's level by the same `evolve` the trainer's own
+  --     Pokemon get, so a Bug Catcher at 14 gets a Metapod and one at 40 gets
+  --     a Butterfree, with no level table to maintain.
+  --   * a species whose earliest wild appearance is well above this slot's
+  --     level is skipped, so a level 12 Youngster cannot open with a Tauros
+  --     just because Tauros is a catchable Normal type.
+  --
+  -- Registry iteration order is not stable, and a trainer who fields a
+  -- different Pokemon each time you meet him reads as broken rather than
+  -- varied.  So the candidate lists are sorted and the pick is a hash of the
+  -- trainer's own identity: the same trainer always brings the same Pokemon.
+  local padPool   -- built on first use, by which point registries have settled
+
+  local function collectWild(record, species, minLevel)
+    for _, field in ipairs({ "grass", "water" }) do
+      local group = record and record[field]
+      for _, slot in ipairs(group and group.slots or {}) do
+        local id, level = slot.species, slot.level or 1
+        if id then
+          species[id] = true
+          if not minLevel[id] or level < minLevel[id] then
+            minLevel[id] = level
+          end
+        end
+      end
+    end
+  end
+
+  local function buildPadPool()
+    local pool = { byType = {}, minLevel = {}, size = 0 }
+    local dex = mod.content and mod.content.pokemon
+    if not (dex and dex.each) then return pool end
+
+    -- where each species can be caught, and from what level
+    local wild, sawWild = {}, false
+    local enc = mod.content and mod.content.encounters
+    if enc and enc.each then
+      local ok = pcall(function()
+        for _, record in enc:each() do
+          sawWild = true
+          collectWild(record, wild, pool.minLevel)
+        end
+      end)
+      if not ok then sawWild = false end
+    end
+
+    -- anything that is some other species' evolution is not a base stage
+    local defs, evolved = {}, {}
+    local ok = pcall(function()
+      for id, def in dex:each() do
+        defs[id] = def
+        for _, evo in ipairs(def and def.evolutions or {}) do
+          if evo.species then evolved[evo.species] = true end
+        end
+      end
+    end)
+    if not ok then return pool end
+
+    -- The wild filter is required, not best-effort.  It is the only thing
+    -- keeping the fossils, the game-corner prizes, the gift Pokemon and the
+    -- legendaries out -- not one of them appears in a single wild table -- so
+    -- without encounter data the honest move is to leave `size` at 0 and let
+    -- the old copy-padding stand, rather than open the pool to Mewtwo.
+    if not sawWild then return pool end
+
+    for id, def in pairs(defs) do
+      if not evolved[id] and wild[id] then
+        for _, kind in ipairs(def.types or {}) do
+          pool.byType[kind] = pool.byType[kind] or {}
+          local list = pool.byType[kind]
+          list[#list + 1] = id
+        end
+        pool.size = pool.size + 1
+      end
+    end
+    for _, list in pairs(pool.byType) do table.sort(list) end
+    return pool
+  end
+
+  -- djb2 over the trainer's identity: stable across sessions and builds, and
+  -- unlike math.random it cannot be disturbed by whatever else drew from the
+  -- shared stream this turn.
+  local function padSeed(...)
+    local h = 5381
+    for _, value in ipairs({ ... }) do
+      local text = tostring(value)
+      for i = 1, #text do
+        h = (h * 33 + text:byte(i)) % 2147483647
+      end
+    end
+    return h
+  end
+
+  -- How far above a slot's level a species' earliest wild appearance may sit
+  -- before it stops being plausible for that trainer.
+  local PAD_LEVEL_SLACK = 5
+
+  local function padderFor(oppClass, partyIndex, evolve)
+    if mod.options:get("pad_variety") == false then return nil end
+    padPool = padPool or buildPadPool()
+    if padPool.size == 0 then return nil end
+
+    return function(slotIndex, level, taken, theme)
+      -- the types this trainer is themed on, read off his OWN Pokemon only
+      local kinds, seen = {}, {}
+      for _, species in ipairs(theme or {}) do
+        local def = speciesDef(species)
+        for _, kind in ipairs(def and def.types or {}) do
+          if not seen[kind] then
+            seen[kind] = true
+            kinds[#kinds + 1] = kind
+          end
+        end
+      end
+      table.sort(kinds)
+
+      -- Bucket by how many of the trainer's types a candidate shares, and
+      -- only ever pick from the closest non-empty bucket.  Sharing *any* type
+      -- is too loose: a Bug Catcher's Weedle makes Poison on theme, which
+      -- would let a Tentacool in on a technicality.  Preferring the deepest
+      -- overlap keeps a Bug/Poison catcher reaching for Bug/Poison first.
+      local buckets, listed = {}, {}
+      local deepest = 0
+      for _, kind in ipairs(kinds) do
+        for _, id in ipairs(padPool.byType[kind] or {}) do
+          local earliest = padPool.minLevel[id]
+          local plausible = not earliest
+            or earliest <= (level or 1) + PAD_LEVEL_SLACK
+          if plausible and not listed[id] then
+            listed[id] = true
+            local overlap = 0
+            for _, mine in ipairs(speciesDef(id) and speciesDef(id).types or {}) do
+              if seen[mine] then overlap = overlap + 1 end
+            end
+            buckets[overlap] = buckets[overlap] or {}
+            local list = buckets[overlap]
+            list[#list + 1] = id
+            if overlap > deepest then deepest = overlap end
+          end
+        end
+      end
+
+      -- Try the closest bucket first, then fall through to looser ones. The
+      -- fall-through is not optional: the deepest bucket is often a single
+      -- species and often the one the trainer already fields -- a Weedle is
+      -- the only Bug/Poison base stage -- so stopping at the best bucket
+      -- would hand back nothing and drop us onto a duplicate copy.
+      local seed = padSeed(oppClass, partyIndex, slotIndex)
+      for depth = deepest, 1, -1 do
+        local candidates = buckets[depth]
+        if candidates and #candidates > 0 then
+          table.sort(candidates)
+          -- walk from the hashed start so a taken species moves the pick
+          -- along rather than ending the search
+          local start = seed % #candidates
+          for step = 0, #candidates - 1 do
+            local id = candidates[(start + step) % #candidates + 1]
+            local grown = evolve and evolve(id, level or 1) or id
+            if not taken[grown] then return grown end
+          end
+        end
+      end
+      return nil
+    end
+  end
+
   -- published so the format state and the roster trimming can be driven
   -- directly by tests, and read by any mod that wants to know a restricted
   -- gym battle is in progress
+  mod.exports.padderFor = padderFor
   mod.exports.formatState = formatState
   mod.exports.trimToFormat = trimToFormat
   mod.exports.aiState = aiState
@@ -271,11 +521,19 @@ return function(mod)
   mod.hooks:wrap("trainer.party", function(next, oppClass, partyIndex, _party)
     -- let the rest of the chain settle first, then transform what it agreed on
     local party = next()
-    if type(party) ~= "table" or #party == 0 then return party end
 
     local team = mod.options:get("boss_teams") ~= false
       and BOSS_TEAMS[tostring(oppClass) .. "#" .. tostring(partyIndex)]
       or nil
+
+    -- An authored roster is consulted BEFORE the empty-party bail-out, which
+    -- is what lets one stand in for a class this version ships no data for.
+    -- OPP_CHIEF is the case: unused in Red and an empty table in Blue and
+    -- Yellow, so the old ordering meant his roster could never apply outside
+    -- Red even when another mod placed him.
+    if not team and (type(party) ~= "table" or #party == 0) then
+      return party
+    end
 
     if team then
       -- a format the player just picked narrows the roster; the ace stays
@@ -297,7 +555,7 @@ return function(mod)
       end
     end
     return scaleParty(party, num("trainer_levels", 15), num("min_party", 3),
-                      evolve)
+                      evolve, padderFor(oppClass, partyIndex, evolve))
   end)
 
   -- XP payout.  `exp.gain` is consulted once per participant and the number it

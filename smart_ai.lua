@@ -32,11 +32,15 @@
 
 return function(mod, state)
   local Damage = require("src.battle.Damage")
+  local TypeChart = require("src.battle.TypeChart")
 
   local LAYER_ID = "ST_SMART"
   local HP_BAR_PIXELS = 48   -- gen 1 draws the HP bar 48px wide
   local MAX_HEALS = 2        -- healing moves per Pokemon per battle
   local HEAL_BELOW = 0.5     -- and only when this hurt
+  -- one full effectiveness step on the chart's x10 scale: the improvement a
+  -- backup has to offer before a boss will spend a turn rotating to it
+  local SWITCH_MIN_GAIN = 10
 
   -- effect ids as they appear in the ROM data
   local HEAL = { HEAL_EFFECT = true }
@@ -194,8 +198,139 @@ return function(mod, state)
     return current + adj
   end
 
+  -- ------------------------------------------------------------- switching
+  --
+  -- Vanilla Gen 1 trainers effectively never switch on purpose:
+  -- TrainerAI.switchAction takes the FIRST unfainted backup whatever the
+  -- matchup, and only a handful of classes roll for it at all.  This makes a
+  -- boss rotate deliberately, into something the matchup actually favours.
+  --
+  -- Why `battle.enemy_action` and not an ai_classes brain: a brain supersedes
+  -- the class action AND move scoring outright (BattleState:vanillaEnemyAction
+  -- returns brain(self) before either runs), which would throw away this
+  -- file's own scoring layer, the vanilla three, and modern_kanto's type
+  -- pass.  Wrapping the choke point instead lets the switch be an exception
+  -- and leaves every other turn to fall through untouched.
+  --
+  -- Fair information, the same rule the scoring layer holds to: this reads
+  -- SPECIES TYPES on both sides, which is what a player can see across the
+  -- field, and never the player's move list, stats or DVs.  Type stands in
+  -- for what each side is threatening rather than a peek at what it actually
+  -- carries.
+  --
+  -- The turn it costs is what keeps it honest -- the player gets a free move
+  -- every time a boss rotates -- and three things stop it becoming a stall:
+  -- a per-battle cap, a grace turn after every send-out so it can never
+  -- ping-pong, and a refusal to switch away from a Pokemon that can already
+  -- finish the job this turn.
+
+  -- per-battle bookkeeping; weak keys so a finished battle is collectable
+  local switching = setmetatable({}, { __mode = "k" })
+
+  local function recordFor(battle)
+    local rec = switching[battle]
+    if not rec then
+      rec = { count = 0, index = battle.enemyIndex, since = -1 }
+      switching[battle] = rec
+    end
+    -- a send-out (ours or a faint replacement) restarts the grace turn
+    if rec.index ~= battle.enemyIndex then
+      rec.index = battle.enemyIndex
+      rec.since = battle.turnCount or 0
+    end
+    return rec
+  end
+
+  local function typesFor(battle, mon)
+    local dex = battle.data and battle.data.pokemon
+    local def = dex and mon and mon.species and dex[mon.species]
+    return def and def.types or nil
+  end
+
+  -- best multiplier any of `attacking` gets against `defending`, x10
+  local function bestAgainst(attacking, defending)
+    local top = 0
+    for _, t in ipairs(attacking) do
+      local m = TypeChart.effectiveness(t, defending)
+      if m > top then top = m end
+    end
+    return top
+  end
+
+  -- How well a Pokemon of `mine` fares against what the player has out:
+  -- what it threatens, less what it is threatened by.  0 is an even trade.
+  local function matchup(battle, mine)
+    local theirs = battle.player and battle.player.curTypes
+    if not (mine and theirs and #mine > 0 and #theirs > 0) then return nil end
+    return bestAgainst(mine, theirs) - bestAgainst(theirs, mine)
+  end
+
+  -- Would the Pokemon already out finish the player this turn?  Switching
+  -- away from a kill is never right, and this is the same visible-HP,
+  -- deterministic estimate the scoring layer uses.
+  local function canFinish(battle)
+    local user, target = battle.enemy, battle.player
+    if not (user and target and battle.data and battle.data.moves) then
+      return false
+    end
+    local hp = visibleHp(target.mon)
+    if hp <= 0 then return true end
+    for _, mv in ipairs(user.curMoves or {}) do
+      local def = battle.data.moves[mv.id]
+      if def then
+        local ok, dmg = pcall(Damage.compute, battle.ruleset, user, target, def,
+                             { forceCrit = false, rng = estimateRng })
+        if ok and type(dmg) == "number" and dmg >= hp then return true end
+      end
+    end
+    return false
+  end
+
+  local function considerSwitch(battle, bosses)
+    if not battle or battle.kind ~= "trainer" then return nil end
+    if mod.options:get("boss_switching") == false then return nil end
+    if not bosses[tostring(battle.oppClass)] then return nil end
+
+    local cap = math.floor(tonumber(mod.options:get("boss_switch_cap")) or 2)
+    if cap <= 0 then return nil end
+
+    local rec = recordFor(battle)
+    if rec.count >= cap then return nil end
+    -- one full turn on the field before it may rotate again
+    if (battle.turnCount or 0) <= rec.since then return nil end
+
+    local current = matchup(battle, battle.enemy and battle.enemy.curTypes)
+    -- unknown types mean no informed call is available; leave the turn alone
+    if current == nil or current >= 0 then return nil end
+    if canFinish(battle) then return nil end
+
+    local pick, pickScore
+    for i, mon in ipairs(battle.enemyParty or {}) do
+      if i ~= battle.enemyIndex and (mon.hp or 0) > 0 then
+        local score = matchup(battle, typesFor(battle, mon))
+        if score and (not pickScore or score > pickScore) then
+          pick, pickScore = i, score
+        end
+      end
+    end
+    if not pick or pickScore < current + SWITCH_MIN_GAIN then return nil end
+
+    rec.count = rec.count + 1
+    rec.index = pick
+    rec.since = battle.turnCount or 0
+    return { special = "aiSwitch", index = pick }
+  end
+
   return function(teams)
     local bosses = bossClasses(teams)
+
+    -- A throw in here would cost the enemy its whole turn, so any surprise
+    -- falls through to whatever the chain would have chosen anyway.
+    mod.hooks:wrap("battle.enemy_action", function(next, battle)
+      local ok, action = pcall(considerSwitch, battle, bosses)
+      if ok and type(action) == "table" then return action end
+      return next(battle)
+    end)
 
     mod.content.ai_classes:register(LAYER_ID, {
       kind = "layer",
@@ -232,5 +367,7 @@ return function(mod, state)
     state.scoreFor = score
     state.bosses = bosses
     state.heals = function() return heals end
+    state.considerSwitch = function(battle) return considerSwitch(battle, bosses) end
+    state.matchup = matchup
   end
 end
