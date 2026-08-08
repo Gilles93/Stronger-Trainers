@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.7.2
+
+Bosses were spamming one move. Three things caused it.
+
+The AI scores every move and picks the lowest, breaking ties at random, and
+that tie-break is the only variety Gen 1's AI has. Scoring damage on a fine
+scale made ties impossible, so the biggest move won every turn forever —
+five of Giovanni's six had exactly one best move. Damage is now graded in
+bands, so moves of similar strength tie again and a genuinely dominant move
+still wins.
+
+Status moves could never be chosen at all. They scored nothing, which left
+them at the base value while any attack scored below it, and the lowest wins.
+That was 117 authored moves across the rosters — Toxic, Screech, Hypnosis,
+Sand Attack — that had never once been used. They're worth a turn each now,
+once, and they're skipped when the target is nearly down.
+
+Repeating last turn's move costs a point. Enough to lose a tie to an equally
+good move, never enough to talk a boss out of a knockout.
+
+Some movesets were the problem rather than the AI. Twenty-two Pokémon had a
+best attack that dwarfed everything else beside it, so they were always going
+to repeat it. Those slots got a real second option or lost the dead weight —
+Brock's Geodude no longer carries Tackle alongside Body Slam, Agatha's Haunter
+gets Night Shade, the Champion's Pidgeot gets Swift.
+
+Also: an attack that happens to carry a status side effect is judged as an
+attack again. Body Slam was being discouraged against an already-paralysed
+target, which made no sense.
+
 ## 1.7.1
 
 Early-game pass. The first gyms were unfair rather than hard.

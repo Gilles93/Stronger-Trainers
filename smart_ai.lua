@@ -38,12 +38,31 @@ return function(mod, state)
   local HP_BAR_PIXELS = 48   -- gen 1 draws the HP bar 48px wide
   local MAX_HEALS = 2        -- healing moves per Pokemon per battle
   local HEAL_BELOW = 0.5     -- and only when this hurt
+  local FINISH_BELOW = 0.4   -- below this, stop setting up and finish it
+  local SETUP_ABOVE = 0.5    -- and never set up below this much of your own
+
+  -- Damage in bands, not a gradient.
+  --
+  -- TrainerAI.chooseMove takes the LOWEST-scoring move and breaks ties at
+  -- random among the minima, and that tie-break is the only variety Gen 1's
+  -- AI has ever had: the three vanilla layers only ever nudge by one, so ties
+  -- are the normal case.  Scoring damage per-point made ties impossible and
+  -- collapsed this layer into "use the single biggest move, every turn" --
+  -- five of Giovanni's six had exactly one best move and never deviated from
+  -- it.  Bands let comparable moves tie again, while a genuinely dominant
+  -- move still wins outright.
+  local function damageBand(share)
+    if share >= 0.9 then return 4 end      -- takes the bar off
+    if share >= 0.4 then return 2 end      -- a solid hit
+    return 1                               -- chip
+  end
   -- one full effectiveness step on the chart's x10 scale: the improvement a
   -- backup has to offer before a boss will spend a turn rotating to it
   local SWITCH_MIN_GAIN = 10
 
   -- effect ids as they appear in the ROM data
   local HEAL = { HEAL_EFFECT = true }
+  local LEECH = { LEECH_SEED_EFFECT = true }
   local SETUP = {
     ATTACK_UP1_EFFECT = true, ATTACK_UP2_EFFECT = true,
     DEFENSE_UP1_EFFECT = true, DEFENSE_UP2_EFFECT = true,
@@ -95,16 +114,43 @@ return function(mod, state)
     return math.max(0, mon.hp or 0) / math.max(1, mon.stats.hp)
   end
 
-  -- heals used, keyed by the live enemy mon; cleared per battle
-  local heals = setmetatable({}, { __mode = "k" })
+  -- Every "lower the target's something" effect is named the same way --
+  -- DEFENSE_DOWN2_EFFECT, ACCURACY_DOWN1_EFFECT -- so match the shape rather
+  -- than list twenty ids that would drift out of date.
+  local function isDebuff(effect)
+    return type(effect) == "string" and effect:find("_DOWN%d") ~= nil
+  end
 
-  mod.events:on("battle.started", function() heals = setmetatable({}, { __mode = "k" }) end)
-  mod.events:on("battle.ended", function() heals = setmetatable({}, { __mode = "k" }) end)
+  -- Per-battle memory, all keyed by the live enemy mon and all cleared
+  -- together: heals spent, stat moves already used, and last turn's move.
+  local heals, statUses, lastMove
+
+  local function forget()
+    heals = setmetatable({}, { __mode = "k" })
+    statUses = setmetatable({}, { __mode = "k" })
+    lastMove = setmetatable({}, { __mode = "k" })
+  end
+  forget()
+
+  local function usedFor(mon, effect)
+    local per = mon and statUses[mon]
+    return (per and per[effect]) or 0
+  end
+
+  mod.events:on("battle.started", forget)
+  mod.events:on("battle.ended", forget)
   mod.events:on("battle.move_used", function(ev)
     local battle, user, move = ev and ev.battle, ev and ev.user, ev and ev.move
     if not (battle and user and move) or user.isPlayer then return end
-    if HEAL[move.effect] and user.mon then
+    if not user.mon then return end
+    if HEAL[move.effect] then
       heals[user.mon] = (heals[user.mon] or 0) + 1
+    end
+    lastMove[user.mon] = move.id
+    if (move.power or 0) == 0 then
+      local per = statUses[user.mon]
+      if not per then per = {}; statUses[user.mon] = per end
+      per[move.effect] = (per[move.effect] or 0) + 1
     end
   end)
 
@@ -133,6 +179,11 @@ return function(mod, state)
     local adj = 0
     local hp, maxHp = visibleHp(target.mon)
     local mine = selfFraction(user)
+    -- how much of the target is left, and whether finishing it now beats
+    -- spending the turn on anything else
+    local left = maxHp > 0 and hp / maxHp or 1
+    local finishing = left <= FINISH_BELOW
+    local isStatusMove = (def.power or 0) == 0
 
     -- ---------------------------------------------------------- damage & KO
     local dmg = 0
@@ -154,11 +205,11 @@ return function(mod, state)
       local acc = math.min(100, def.accuracy or 100) / 100
       local expected = dmg * acc
       local share = math.min(1, expected / math.max(1, maxHp))
-      adj = adj - math.floor(share * 6 + 0.5)   -- up to -6 for a full bar
+      adj = adj - damageBand(share)
 
       -- a move that finishes the job, weighted by how likely it is to land
       if dmg >= hp and hp > 0 then
-        adj = adj - (acc >= 0.9 and 6 or acc >= 0.7 and 4 or 2)
+        adj = adj - (acc >= 0.9 and 4 or acc >= 0.7 and 3 or 2)
       end
       -- Hyper Beam's recharge is a real cost when it does not finish things.
       -- The exploit is the reverse -- valuing it BECAUSE a KO skips the
@@ -167,19 +218,40 @@ return function(mod, state)
     end
 
     -- --------------------------------------------------- status, used sanely
-    local want = INFLICTS[def.effect]
+    --
+    -- Only for moves that do nothing else.  The old rule fired on damaging
+    -- moves carrying a status side effect too, so Body Slam was discouraged
+    -- against an already-paralysed target -- it is a fine attack either way.
+    local want = isStatusMove and INFLICTS[def.effect]
     if want then
-      local has = target.mon and target.mon.status
-      if has then
+      if target.mon and target.mon.status then
         adj = adj + 4                      -- already statused: pointless
+      elseif finishing then
+        adj = adj + 2                      -- too late to be worth a turn
       elseif want == "sleep" then
-        adj = adj + 1                      -- fair play, never a lock: no bonus
+        adj = adj - 1                      -- worth a turn, but never a lock
+      else
+        adj = adj - 2
       end
     end
 
-    -- ------------------------------------------------------ self-preservation
-    if SETUP[def.effect] and mine < 0.5 then
-      adj = adj + 4                        -- no setting up while dying
+    -- ------------------------------------------------ stat moves and seeding
+    --
+    -- These scored nothing at all before, which pinned them at the base of 10
+    -- while any attack scored below it.  Since the lowest score wins, that
+    -- made every one of them unpickable -- 117 authored status moves across
+    -- the rosters that could never once be used.  Each is worth a turn, once.
+    if isStatusMove and (SETUP[def.effect] or LEECH[def.effect]
+                         or isDebuff(def.effect)) then
+      if usedFor(user.mon, def.effect) > 0 then
+        adj = adj + 3                      -- said once already
+      elseif finishing then
+        adj = adj + 2                      -- finish it instead
+      elseif SETUP[def.effect] and mine < SETUP_ABOVE then
+        adj = adj + 4                      -- no setting up while dying
+      else
+        adj = adj - 1
+      end
     end
 
     if HEAL[def.effect] then
@@ -194,6 +266,13 @@ return function(mod, state)
     -- ------------------------------------------------------------- no cheese
     if TRAPPING[def.effect] then adj = adj + 3 end
     if EXPLODE[def.effect] then adj = adj + 6 end
+
+    -- ----------------------------------------------------------- say it once
+    -- One point of "pick something else".  Enough to lose a tie to an equally
+    -- good move, never enough to talk it out of a knockout.
+    if def.id and lastMove[user.mon] == def.id then
+      adj = adj + 1
+    end
 
     return current + adj
   end

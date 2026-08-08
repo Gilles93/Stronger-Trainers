@@ -53,16 +53,16 @@ GYM_LEADERS = {
     # vanilla does too. Rock Throw carries the middle of the team and Rock
     # Slide is kept for Rhyhorn and the Onix.
     "OPP_BROCK#1": [
-        ("GEODUDE",   ["TACKLE", "BODY_SLAM", "DEFENSE_CURL"]),
+        ("GEODUDE",   ["BODY_SLAM", "DEFENSE_CURL"]),
         ("SANDSHREW", ["SCRATCH", "SWIFT", "SAND_ATTACK"]),
         ("RHYHORN",   ["ROCK_SLIDE", "HORN_ATTACK", "BODY_SLAM"]),
-        ("KABUTO",    ["SCRATCH", "HARDEN", "BODY_SLAM"]),
+        ("KABUTO",    ["BODY_SLAM", "HARDEN"]),
         # Yellow's Brock sits two levels lower, and Rock Throw arrives at 16
         # for the Geodude line and 19 for Onix, so Yellow falls back to the TM
         ("GRAVELER",  {"*": ["ROCK_THROW", "TACKLE", "DEFENSE_CURL"],
-                       "yellow": ["ROCK_SLIDE", "TACKLE", "DEFENSE_CURL"]}),
+                       "yellow": ["ROCK_SLIDE", "DEFENSE_CURL"]}),
         ("ONIX",      {"*": ["ROCK_SLIDE", "ROCK_THROW", "SCREECH", "TOXIC"],
-                       "yellow": ["ROCK_SLIDE", "TACKLE", "SCREECH", "TOXIC"]}),
+                       "yellow": ["ROCK_SLIDE", "SCREECH", "TOXIC"]}),
     ],
     # Water. Water and Normal only. Starmie's Psychic is gone despite being
     # its own STAB: it is 2x into the Grass/Poison starter a player brings to
@@ -73,11 +73,11 @@ GYM_LEADERS = {
     # and only below half, so it is a longer fight rather than an unwinnable
     # one.
     "OPP_MISTY#1": [
-        ("PSYDUCK",   ["WATER_GUN", "SCRATCH", "BODY_SLAM", "DOUBLE_TEAM"]),
-        ("SHELLDER",  ["WATER_GUN", "TRI_ATTACK", "SUPERSONIC", "WITHDRAW"]),
+        ("PSYDUCK",   ["WATER_GUN", "SCRATCH", "DOUBLE_TEAM"]),
+        ("SHELLDER",  ["WATER_GUN", "SUPERSONIC", "WITHDRAW"]),
         ("SEADRA",    ["BUBBLEBEAM", "SWIFT", "TOXIC", "SMOKESCREEN"]),
-        ("POLIWHIRL", ["WATER_GUN", "BODY_SLAM", "HYPNOSIS", "DOUBLESLAP"]),
-        ("STARYU",    ["BUBBLEBEAM", "SWIFT", "THUNDER_WAVE", "HARDEN"]),
+        ("POLIWHIRL", ["BUBBLEBEAM", "BODY_SLAM", "HYPNOSIS", "DOUBLESLAP"]),
+        ("STARYU",    ["WATER_GUN", "SWIFT", "THUNDER_WAVE", "HARDEN"]),
         ("STARMIE",   ["BUBBLEBEAM", "TRI_ATTACK", "THUNDER_WAVE", "RECOVER"]),
     ],
     # Electric. Weak to Ground, which Electric moves cannot touch at all, so
@@ -101,12 +101,12 @@ GYM_LEADERS = {
         # Sleep Powder was on four of six, which is the whole fight decided
         # before it starts. Two carry it now; the rest lean on Stun Spore and
         # Toxic, which cost you the fight more slowly and more fairly.
-        ("TANGELA",    ["MEGA_DRAIN", "BODY_SLAM", "STUN_SPORE", "TOXIC"]),
+        ("TANGELA",    ["MEGA_DRAIN", "STUN_SPORE", "TOXIC", "DOUBLE_TEAM"]),
         ("GLOOM",      ["ACID", "SLEEP_POWDER", "MEGA_DRAIN", "TOXIC"]),
         ("WEEPINBELL", ["RAZOR_LEAF", "ACID", "STUN_SPORE", "GROWTH"]),
         ("EXEGGUTOR",  ["PSYCHIC_M", "HYPNOSIS", "REFLECT", "LEECH_SEED"]),
         ("VICTREEBEL", ["RAZOR_LEAF", "ACID", "BODY_SLAM", "SLEEP_POWDER"]),
-        ("VILEPLUME",  ["MEGA_DRAIN", "BODY_SLAM", "TOXIC", "STUN_SPORE"]),
+        ("VILEPLUME",  ["PETAL_DANCE", "MEGA_DRAIN", "TOXIC", "STUN_SPORE"]),
     ],
     # Poison. Weak to Ground/Psychic/Bug. Golbat is outright immune to
     # Ground, Arbok answers it with Earthquake of its own, and Muk/Weezing
@@ -114,7 +114,7 @@ GYM_LEADERS = {
     "OPP_KOGA#1": [
         ("KOFFING",  ["SLUDGE", "TOXIC", "FIRE_BLAST", "SMOKESCREEN"]),
         ("GOLBAT",   ["WING_ATTACK", "CONFUSE_RAY", "TOXIC", "MEGA_DRAIN"]),
-        ("VENOMOTH", ["PSYCHIC_M", "SLEEP_POWDER", "MEGA_DRAIN", "DOUBLE_TEAM"]),
+        ("VENOMOTH", ["PSYBEAM", "MEGA_DRAIN", "SLEEP_POWDER", "DOUBLE_TEAM"]),
         ("ARBOK",    ["EARTHQUAKE", "GLARE", "BODY_SLAM", "ACID"]),
         ("MUK",      ["SLUDGE", "TOXIC", "THUNDERBOLT", "BODY_SLAM"]),
         ("WEEZING",  ["SLUDGE", "TOXIC", "THUNDERBOLT", "FIRE_BLAST"]),
@@ -125,10 +125,10 @@ GYM_LEADERS = {
     # attacks entirely.
     "OPP_SABRINA#1": [
         ("MR_MIME",   ["PSYCHIC_M", "THUNDERBOLT", "BARRIER", "SEISMIC_TOSS"]),
-        ("VENOMOTH",  ["PSYCHIC_M", "SLEEP_POWDER", "MEGA_DRAIN", "DOUBLE_TEAM"]),
+        ("VENOMOTH",  ["PSYCHIC_M", "PSYBEAM", "SLEEP_POWDER", "DOUBLE_TEAM"]),
         ("KADABRA",   ["PSYCHIC_M", "RECOVER", "REFLECT", "THUNDER_WAVE"]),
         ("HYPNO",     ["PSYCHIC_M", "HYPNOSIS", "BODY_SLAM", "REST"]),
-        ("EXEGGUTOR", ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "REFLECT"]),
+        ("EXEGGUTOR", ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "REFLECT"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
     ],
     # Fire. Weak to Water/Ground/Rock. Fire cannot answer Water, so the
@@ -204,7 +204,7 @@ ELITE_FOUR = {
     # Ghost/Poison. Gen 1's Ghost moves cannot touch Psychic, so her damage
     # is Psychic and Thunderbolt with Hypnosis and Toxic underneath.
     "OPP_AGATHA#1": [
-        ("HAUNTER", ["PSYCHIC_M", "HYPNOSIS", "CONFUSE_RAY", "MEGA_DRAIN"]),
+        ("HAUNTER", ["PSYCHIC_M", "NIGHT_SHADE", "HYPNOSIS", "CONFUSE_RAY"]),
         ("GOLBAT",  ["WING_ATTACK", "CONFUSE_RAY", "TOXIC", "MEGA_DRAIN"]),
         ("ARBOK",   ["EARTHQUAKE", "GLARE", "BODY_SLAM", "ACID"]),
         ("WEEZING", ["SLUDGE", "TOXIC", "THUNDERBOLT", "FIRE_BLAST"]),
@@ -228,15 +228,15 @@ ELITE_FOUR = {
 # evolved counter-pick to the player's own starter, as the game intends.
 CHAMPION_RB = {
     1: [  # player chose Charmander -> rival carries Blastoise
-        ("PIDGEOT",   ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
+        ("PIDGEOT",   ["DOUBLE_EDGE", "SWIFT", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
         ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
         ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
-        ("EXEGGUTOR", ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "STUN_SPORE"]),
+        ("EXEGGUTOR", ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "STUN_SPORE"]),
         ("BLASTOISE", ["SURF", "BLIZZARD", "BODY_SLAM", "EARTHQUAKE"]),
     ],
     2: [  # Squirtle -> Venusaur
-        ("PIDGEOT",  ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
+        ("PIDGEOT",  ["DOUBLE_EDGE", "SWIFT", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM", ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
         ("RHYDON",   ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
         ("GYARADOS", ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "HYPER_BEAM"]),
@@ -244,10 +244,10 @@ CHAMPION_RB = {
         ("VENUSAUR", ["RAZOR_LEAF", "SLEEP_POWDER", "BODY_SLAM", "MEGA_DRAIN"]),
     ],
     3: [  # Bulbasaur -> Charizard
-        ("PIDGEOT",   ["DOUBLE_EDGE", "WING_ATTACK", "TOXIC", "SAND_ATTACK"]),
+        ("PIDGEOT",   ["DOUBLE_EDGE", "SWIFT", "TOXIC", "SAND_ATTACK"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
         ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
-        ("EXEGGUTOR", ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "STUN_SPORE"]),
+        ("EXEGGUTOR", ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "STUN_SPORE"]),
         ("GYARADOS",  ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "HYPER_BEAM"]),
         ("CHARIZARD", ["FIRE_BLAST", "EARTHQUAKE", "SLASH", "SWORDS_DANCE"]),
     ],
@@ -303,12 +303,12 @@ YELLOW_DEVOLVE = {
 }
 
 CHAMPION_YELLOW_MOVES = {
-    "JOLTEON":  ["THUNDERBOLT", "PIN_MISSILE", "DOUBLE_KICK", "AGILITY"],
+    "JOLTEON":  ["THUNDERBOLT", "SWIFT", "DOUBLE_KICK", "AGILITY"],
     "FLAREON":  ["FIRE_BLAST", "BODY_SLAM", "QUICK_ATTACK", "TAKE_DOWN"],
     "VAPOREON": ["SURF", "BLIZZARD", "BODY_SLAM", "ACID_ARMOR"],
     "SANDSLASH": ["EARTHQUAKE", "ROCK_SLIDE", "SLASH", "SWIFT"],
     "ALAKAZAM": ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"],
-    "EXEGGUTOR": ["PSYCHIC_M", "MEGA_DRAIN", "SLEEP_POWDER", "STUN_SPORE"],
+    "EXEGGUTOR": ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "STUN_SPORE"],
     "CLOYSTER": ["BLIZZARD", "SURF", "SPIKE_CANNON", "TOXIC"],
     "NINETALES": ["FLAMETHROWER", "CONFUSE_RAY", "TOXIC", "BODY_SLAM"],
     "MAGNETON": ["THUNDERBOLT", "THUNDER_WAVE", "SWIFT", "DOUBLE_TEAM"],

@@ -171,6 +171,30 @@ def validate(version: str, table):
                         f"{version} {key} slot {pos}: {species} L{level} "
                         f"cannot learn {mv}")
 
+        # A slot whose best attack dwarfs its next one repeats that move
+        # however the AI is scored, because using it really is correct. The
+        # variety has to be built into the moveset, not asked of the AI.
+        # Seismic Toss, Night Shade and Sonicboom are listed at 1 power but
+        # deal the user's level or a flat amount, which lands somewhere around
+        # a mid-power move for most of the game. Rate them there so they do not
+        # read as dead weight next to a real attack.
+        FIXED_AS = 60
+        FIXED = {"SPECIAL_DAMAGE_EFFECT", "SUPER_FANG_EFFECT"}
+
+        def rated(mv):
+            rec = g.moves.get(mv) or {}
+            if (rec.get("effect") or "") in FIXED:
+                return FIXED_AS
+            return rec.get("power") or 0
+
+        for species, level, moves in slots:
+            powers = sorted((rated(mv) for mv in (moves or [])), reverse=True)
+            powers = [p for p in powers if p > 0]
+            if len(powers) >= 2 and powers[0] >= 2 * powers[1]:
+                problems.append(
+                    f"{version} {key}: {species}'s best attack is {powers[0]} "
+                    f"power against {powers[1]} for the next -- it will repeat")
+
         cap = availability.max_power(key)
         if cap is not None:
             for species, level, moves in slots:

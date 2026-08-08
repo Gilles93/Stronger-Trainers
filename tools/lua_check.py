@@ -120,7 +120,7 @@ require = function(name)
 end
 
 -- the slice of the mod API these files use
-local recorded = { hooks = {}, options = {}, warnings = {} }
+local recorded = { hooks = {}, options = {}, warnings = {}, events = {} }
 local optionValues = {}
 
 local function registry(backing)
@@ -157,7 +157,7 @@ local mod = {
   hooks = {
     wrap = function(_, name, fn) recorded.hooks[name] = fn end,
   },
-  events = { on = function() end },
+  events = { on = function(_, name, fn) recorded.events[name] = fn end },
   content = {
     pokemon = registry(DATA.pokemon),
     encounters = registry(DATA.encounters),
@@ -169,7 +169,11 @@ local mod = {
 local chunk = assert(loadstring(FILES["main.lua"], "@main.lua"))
 chunk()(mod)
 
-return { mod = mod, recorded = recorded, options = optionValues }
+return { mod = mod, recorded = recorded, options = optionValues,
+         fire = function(name, ev)
+           local fn = recorded.events[name]
+           if fn then fn(ev) end
+         end }
 """
 
 
@@ -415,11 +419,88 @@ def switching():
     check(out["capped"], "the per-fight switch cap holds")
 
 
+
+SCORING_TEST = """
+local aiState, DATA, fire = ...
+local scoreFor = aiState.scoreFor
+if type(scoreFor) ~= "function" then return { missing = true } end
+
+local function mon(hp, max)
+  return { hp = hp, stats = { hp = max }, level = 40, status = nil }
+end
+local function view(targetHp)
+  local battle = { oppClass = "OPP_BROCK", ruleset = {}, data = DATA }
+  local user = { mon = mon(100, 100), curTypes = { "ROCK" }, curMoves = {} }
+  local target = { mon = mon(targetHp, 100), curTypes = { "NORMAL" },
+                   curMoves = {} }
+  battle.player, battle.enemy = target, user
+  return { battle = battle, user = user, target = target }, user
+end
+
+local bosses = { OPP_BROCK = true }
+local out = {}
+
+-- a stat-lowering move used to score a flat 10 and could never be picked
+local v = view(100)
+out.debuffBeatsBase = scoreFor(v, DATA.moves.SCREECH, 10, bosses) < 10
+out.toxicBeatsBase = scoreFor(v, DATA.moves.TOXIC, 10, bosses) < 10
+
+-- but not when the target is nearly finished
+local dying = view(20)
+out.finishInstead = scoreFor(dying, DATA.moves.TOXIC, 10, bosses)
+                    > scoreFor(v, DATA.moves.TOXIC, 10, bosses)
+
+-- a damaging move with a status side effect is not treated as a status move
+out.bodySlamUnpenalised =
+  scoreFor(v, DATA.moves.BODY_SLAM, 10, bosses) <= 10
+
+-- repeating last turn's move costs a point
+local before = scoreFor(v, DATA.moves.SCREECH, 10, bosses)
+fire("battle.move_used", { battle = v.battle, user = v.user,
+                           move = DATA.moves.SCREECH })
+local after = scoreFor(v, DATA.moves.SCREECH, 10, bosses)
+out.repeatCosts = after > before
+
+-- and a stat move said twice is discouraged beyond the repeat damper alone
+out.saidOnce = after - before >= 1
+return out
+"""
+
+
+def scoring():
+    print("\n== move scoring")
+    g = gamedata.load("red")
+    lua, env = run_mod("red", g)
+    ai = env["mod"]["exports"]["aiState"]
+    data = lua.table_from({
+        "moves": lua.table_from({
+            mid: lua.table_from({
+                "id": mid, "power": rec.get("power") or 0,
+                "accuracy": rec.get("accuracy") or 100,
+                "type": rec.get("type"), "effect": rec.get("effect"),
+            }) for mid, rec in g.moves.items()}),
+    })
+    runner = lua.execute(
+        "return function(src) return assert(loadstring(src, '@score')) end")
+    out = runner(SCORING_TEST)(ai, data, env["fire"])
+    if out["missing"]:
+        check(False, "scoreFor is exported")
+        return
+    check(out["debuffBeatsBase"], "a stat-lowering move can now be chosen")
+    check(out["toxicBeatsBase"], "a status move can now be chosen")
+    check(out["finishInstead"], "status is discouraged against a dying target")
+    check(out["bodySlamUnpenalised"],
+          "an attack with a status side effect is judged as an attack")
+    check(out["repeatCosts"], "last turn's move costs a point this turn")
+    check(out["saidOnce"], "a stat move already used is discouraged again")
+
+
 def main():
     compile_all()
     roster_table()
     behaviour()
     switching()
+    scoring()
     print(f"\n{checks} checks, {failures} FAILURES")
     return 1 if failures else 0
 
