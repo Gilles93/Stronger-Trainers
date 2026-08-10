@@ -12,8 +12,12 @@
 --     proportional level bump, short parties are padded out, and any slot
 --     left standing past its own evolution level is walked up its line.
 --
--- One thing does not: the optional XP reduction rides `exp.gain` instead,
--- which is the engine's own per-participant payout hook.
+-- Two things do not. The optional XP reduction rides `exp.gain` instead,
+-- which is the engine's own per-participant payout hook. The static
+-- overworld encounters -- the legendaries, the Snorlax, the ghost, the Power
+-- Plant's item balls -- have no hook to ride at all: nothing on
+-- BattleState.newWild's path consults the mod runtime, so static_battles.lua
+-- shadows that function directly.
 --
 -- Why the hook and not `mod.content.trainers:patch`:
 --
@@ -344,6 +348,14 @@ return function(mod)
     -- 0 leaves stone users alone; the row only matters with the toggle on
     { key = "stone_level", label = "STONE EVO FROM LV", type = "number",
       default = 30, min = 0, max = 60, step = 5 },
+    -- Two rows for the same reason BOSS TEAMS and BOSS MOVESETS are two: the
+    -- level and the moveset are separately objectionable.  With STATIC
+    -- MOVESETS off, a legendary keeps its raised level and reverts to the
+    -- level-up set the engine would have given it there.
+    { key = "statics", label = "STATIC ENCOUNTERS", type = "toggle",
+      default = true },
+    { key = "static_moves", label = "STATIC MOVESETS", type = "toggle",
+      default = true },
     -- a percentage of the normal payout; 100 is off, and the default trims a
     -- quarter to offset what the bigger, evolved trainer parties pay out
     { key = "xp_gain", label = "XP GAIN %", type = "number",
@@ -632,6 +644,21 @@ return function(mod)
     if not ok then
       mod.log:warn("gym format choice failed to install (%s); "
                    .. "boss teams and level scaling are unaffected", tostring(err))
+    end
+  end
+
+  -- Static overworld encounters: the legendaries, the two Snorlax, the ghost
+  -- and the Power Plant's disguised item balls.  Its table is handed in the
+  -- same way boss_teams.lua is, and for the same reason -- the feature file
+  -- reaches for engine internals and the data file must not.
+  local setupStatics = loadSibling(mod, "static_battles.lua",
+                                   "static encounters")
+  if type(setupStatics) == "function" then
+    local STATICS = loadSibling(mod, "statics.lua", "static encounters") or {}
+    local ok, err = pcall(setupStatics, mod, STATICS)
+    if not ok then
+      mod.log:warn("static encounters failed to install (%s); everything "
+                   .. "else is unaffected", tostring(err))
     end
   end
 

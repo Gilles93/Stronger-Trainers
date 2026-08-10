@@ -44,6 +44,17 @@ attack hits whatever came in.
 It plays fair. It goes on type matchups and your HP bar and nothing else. No
 re-sleeping, no Wrap lock-outs, no Explosion spam.
 
+## Legendaries
+
+The birds are level 70. Mewtwo is 85, which is the only way it gets Amnesia.
+
+Both Snorlax, the ghost in Pokémon Tower and the Power Plant's item balls came
+up with them. Voltorb even knows an Electric move now. It never does in the
+real game.
+
+Catching them is no harder than before. Gen 1 only looks at the health you
+leave behind, not the level.
+
 ## Everyone else
 
 Levels up 15%, short parties filled out with something that suits the trainer
@@ -51,4 +62,4 @@ rather than a second Caterpie, and no more level 30 Bulbasaurs. Experience is
 trimmed to 75% so you don't end up over-levelled. Your Pokémon are exactly as
 strong at any given level as they'd normally be. The game just runs longer.
 
-Fourteen options in the MODS menu, all live. Turn any of it off.
+Sixteen options in the MODS menu, all live. Turn any of it off.

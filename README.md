@@ -66,6 +66,37 @@ sitting opposite could see, and nothing else. The tactics that make Gen 1
 miserable rather than hard are left out: no re-sleeping, no Wrap lock-outs, no
 Explosion spam.
 
+## The things that aren't trainers
+
+Fifteen battles in Kanto have no trainer behind them, and vanilla left all of
+them where they were.
+
+| Encounter | Was | Now |
+| --- | --- | --- |
+| Ghost Marowak, Pokémon Tower 6F | 30 | 46 — Earthquake, Body Slam, Ice Beam, Toxic |
+| Snorlax, Route 12 | 30 | 48 — Body Slam, Earthquake, Rock Slide, Amnesia |
+| Snorlax, Route 16 | 30 | 52 — Double-Edge, Earthquake, Rock Slide, Amnesia |
+| Voltorb ×6, Power Plant | 40 | 46 — Thunderbolt, Swift, Thunder Wave, Selfdestruct |
+| Electrode ×2, Power Plant | 43 | 50 — Thunderbolt, Swift, Thunder Wave, Explosion |
+| Zapdos | 50 | 70 — Thunderbolt, Drill Peck, Hyper Beam, Agility |
+| Articuno | 50 | 70 — Blizzard, Ice Beam, Hyper Beam, Reflect |
+| Moltres | 50 | 70 — Fire Blast, Hyper Beam, Double-Edge, Agility |
+| Mewtwo | 70 | 85 — Psychic, Amnesia, Recover, Blizzard |
+
+The birds are a flat 70, the way vanilla made them a flat 50: one tier of
+thing, wherever you meet it. Mewtwo is 85 because Amnesia arrives at 81, and a
+Mewtwo that can't use Amnesia isn't really Mewtwo.
+
+A wild Pokémon has no AI at all — it picks from its four moves at random, every
+turn. So these sets are built the opposite way round from the boss ones: almost
+every slot is something that hurts you, because a move that only matters
+sometimes is a wasted turn one time in four. It's also why no Snorlax here
+knows Rest, and why Voltorb finally knows an Electric attack, which in the real
+game it never does.
+
+Catching them is exactly as hard as it always was. Gen 1 rolls on how much
+health is left as a fraction of the total, and never reads the level.
+
 ## Everyone else
 
 Levels up 15%, short parties filled out with something new rather than a second
@@ -79,7 +110,7 @@ longer.
 
 ## Options
 
-Fourteen rows under MODS > Stronger Trainers. They apply to the next battle, no
+Sixteen rows under MODS > Stronger Trainers. They apply to the next battle, no
 restart.
 
 | Row | Default | What it does |
@@ -97,6 +128,8 @@ restart.
 | `PAD WITH VARIETY` | ON | Off fills them with copies instead of new Pokémon |
 | `EVOLVE PRE-EVOS` | ON | Trainers field the stage their level has earned |
 | `STONE EVO FROM LV` | 30 | When stone evolutions count. 0 leaves them alone |
+| `STATIC ENCOUNTERS` | ON | Off puts the legendaries and the rest back to vanilla |
+| `STATIC MOVESETS` | ON | Off keeps the levels but uses their normal moves |
 | `XP GAIN %` | 75 | Percentage of the normal experience. 100 turns it off |
 
 Too much early on? Drop `TRAINER LEVEL %` to 10 and `MIN PARTY SIZE` to 2. Want

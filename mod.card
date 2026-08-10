@@ -15,15 +15,19 @@ return {
       "Giovanni's three fights and the Celadon Chief field six",
       "every other trainer's levels rise by a configurable percentage",
       "parties shorter than the configured minimum are padded with a different Pokemon of the same type, drawn from what is catchable in the wild at that point",
+      "the fifteen static overworld encounters are raised and given authored movesets: the legendary birds at 70, Mewtwo at 85 with the Amnesia it only learns at 81, both Snorlax, the Pokemon Tower ghost and the Power Plant's disguised item balls",
     },
     added = {
       "MODS menu rows: BOSS TEAMS, BOSS MOVESETS, BOSS LEVEL BONUS, TRAINER LEVEL %, MIN PARTY SIZE",
       "MODS menu rows: BOSS SWITCHING, SWITCHES PER FIGHT and PAD WITH VARIETY",
+      "MODS menu rows: STATIC ENCOUNTERS and STATIC MOVESETS",
     },
     known = {
       "rosters are rewritten as each battle starts, so data.trainers still reads vanilla -- a mod that inspects trainer data outside battle (a rematch level warning, say) sees the original levels",
       "prize money in gen 1 scales with the last Pokemon's level, so richer trainers are an expected side effect",
       "the level curve is computed for the default option values; raising TRAINER LEVEL % well above 15 makes you outpace it again, and BOSS LEVEL BONUS is the dial that answers that",
+      "a static encounter is recognised by map, species and the level its script asks for, so a mod that moves one of those objects to another map, or rewrites the level in the script, gets the vanilla encounter back rather than a wrong one",
+      "a caught static keeps the authored moveset, which is a stronger Pokemon than the vanilla catch; STATIC MOVESETS off is the row for anyone who would rather it did not",
     },
   },
   credits = {

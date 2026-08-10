@@ -29,7 +29,8 @@ from lupa.luajit21 import LuaRuntime
 import gamedata
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LUA_FILES = ("main.lua", "boss_teams.lua", "gym_formats.lua", "smart_ai.lua")
+LUA_FILES = ("main.lua", "boss_teams.lua", "gym_formats.lua", "smart_ai.lua",
+             "statics.lua", "static_battles.lua")
 
 checks = 0
 failures = 0
@@ -118,11 +119,24 @@ stubs["src.battle.Damage"] = {
 -- Only executeAction matters here: the switching fix shadows it per battle
 -- instance so the player's row cannot land on a Pokemon that already left.
 -- Recording the triple it was finally handed is the whole assertion.
+-- newWild is here because static_battles.lua shadows it: this stub is the
+-- `original` the shadow captures and calls, so the placeholder move list it
+-- writes stands in for the level-up set the engine would have filled in --
+-- which is exactly what STATIC MOVESETS off is supposed to leave alone.
 stubs["src.battle.BattleState"] = {
   executeAction = function(self, user, target, action)
     self.executed = { user = user, target = target, action = action }
   end,
+  newWild = function(_game, species, level, _opts)
+    local mon = { species = species, level = level,
+                  moves = { { id = "LEVELUP_FALLBACK", pp = 1 } } }
+    return { kind = "wild", enemy = { mon = mon, curMoves = mon.moves } }
+  end,
 }
+-- The map the player is standing on is read off the Game singleton when the
+-- game object handed to newWild has no live overworld on it.  Left empty so
+-- the argument is the only route the test exercises.
+stubs["src.core.Game"] = {}
 -- gym_formats.lua reaches for five UI/script modules at install time. Stubbed
 -- to nothing useful on purpose: the picker itself is not under test here, but
 -- without them the whole file fails to install and its battle.started and
@@ -209,6 +223,7 @@ local chunk = assert(loadstring(FILES["main.lua"], "@main.lua"))
 chunk()(mod)
 
 return { mod = mod, recorded = recorded, options = optionValues,
+         battle = stubs["src.battle.BattleState"],
          fire = function(name, ev)
            for _, fn in ipairs(recorded.events[name] or {}) do fn(ev) end
          end }
@@ -247,9 +262,17 @@ def lua_data(lua, g):
         if groups:
             encounters[mid] = lua.table_from(groups)
 
+    # static_battles.lua reads game.data.moves[id].pp when it writes an
+    # authored set, so the real PP table goes in rather than a fixture: a move
+    # id that does not exist in a version is meant to be skipped, and that
+    # only gets exercised against the real list.
+    moves = {mid: lua.table_from({"id": mid, "pp": rec.get("pp") or 0})
+             for mid, rec in g.moves.items()}
+
     return lua.table_from({
         "pokemon": lua.table_from(pokemon),
         "encounters": lua.table_from(encounters),
+        "moves": lua.table_from(moves),
         "matchups": lua.table_from(
             {f"{a}>{d}": m for (a, d), m in g.matchups.items()}),
     })
@@ -748,6 +771,92 @@ def scoring():
     check(out["realHealCounts"], "and one that lands still counts")
 
 
+def statics():
+    """The newWild shadow, driven for real.
+
+    Every assertion here is about a way the match could go wrong rather than
+    the happy path alone: the same species at the same level on a different
+    map, the same species on the right map at a wild-table level, and both
+    option rows off.
+    """
+    print("\n== static overworld encounters")
+    import statics as authored
+
+    g = gamedata.load("red")
+    lua, env = run_mod("red", g)
+    battle_module = env["battle"]
+
+    def fight(map_id, species, level):
+        game = lua.table_from({
+            "data": lua_data(lua, g),
+            "overworld": lua.table_from(
+                {"map": lua.table_from({"id": map_id})}),
+        })
+        b = battle_module["newWild"](game, species, level, None)
+        mon = b["enemy"]["mon"]
+        return int(mon["level"]), [m["id"] for m in mon["moves"].values()]
+
+    # every authored row, against its own map
+    for map_id, species, vanilla, level, moves, _why in authored.rows():
+        got_level, got_moves = fight(map_id, species, vanilla)
+        eq(got_level, level, f"{map_id} {species} level")
+        eq(got_moves, moves, f"{map_id} {species} moves")
+
+    # the ghost does not come through Commands.static_battle at all -- story3
+    # calls newWild directly -- so it is the proof the choke point is the
+    # right one
+    check(fight("POKEMON_TOWER_6F", "MAROWAK", 30)[0] == 46,
+          "the ghost Marowak is caught by the same shadow")
+
+    # ... and the wild Marowak on other maps is not
+    for map_id, level in (("VICTORY_ROAD_2F", 40), ("CERULEAN_CAVE_B1F", 55)):
+        lv, mv = fight(map_id, "MAROWAK", level)
+        check(lv == level and mv == ["LEVELUP_FALLBACK"],
+              f"wild MAROWAK on {map_id} at {level} is left alone")
+
+    # the collision the match key exists to avoid: same species, same map,
+    # the level the grass table uses
+    lv, mv = fight("POWER_PLANT", "VOLTORB", 21)
+    check(lv == 21 and mv == ["LEVELUP_FALLBACK"],
+          "a grass VOLTORB in the Power Plant is not a static")
+
+    # right species, right level, wrong map
+    lv, _mv = fight("ROUTE_13", "SNORLAX", 30)
+    eq(lv, 30, "SNORLAX at 30 off its own route")
+
+    # no map, no match -- a battle started before any overworld exists
+    game = lua.table_from({"data": lua_data(lua, g)})
+    b = battle_module["newWild"](game, "MEWTWO", 70, None)
+    eq(int(b["enemy"]["mon"]["level"]), 70, "no overworld, no substitution")
+
+    # the two option rows
+    env["options"]["static_moves"] = False
+    lv, mv = fight("CERULEAN_CAVE_B1F", "MEWTWO", 70)
+    check(lv == 85 and mv == ["LEVELUP_FALLBACK"],
+          "STATIC MOVESETS off keeps the level and drops the set")
+    env["options"]["static_moves"] = True
+
+    env["options"]["statics"] = False
+    lv, mv = fight("CERULEAN_CAVE_B1F", "MEWTWO", 70)
+    check(lv == 70 and mv == ["LEVELUP_FALLBACK"],
+          "STATIC ENCOUNTERS off restores vanilla entirely")
+    env["options"]["statics"] = True
+
+    # the moves have to land on the Pokemon, not only on the battler view:
+    # a caught legendary is enemy.mon handed straight to the party
+    game = lua.table_from({
+        "data": lua_data(lua, g),
+        "overworld": lua.table_from(
+            {"map": lua.table_from({"id": "SEAFOAM_ISLANDS_B4F"})}),
+    })
+    b = battle_module["newWild"](game, "ARTICUNO", 50, None)
+    mon_moves = [m["id"] for m in b["enemy"]["mon"]["moves"].values()]
+    cur_moves = [m["id"] for m in b["enemy"]["curMoves"].values()]
+    eq(mon_moves, cur_moves, "a caught ARTICUNO keeps the authored set")
+    check(all(int(m["pp"]) > 0 for m in b["enemy"]["mon"]["moves"].values()),
+          "every authored move carries its own PP")
+
+
 def main():
     compile_all()
     roster_table()
@@ -755,6 +864,7 @@ def main():
     formats()
     switching()
     scoring()
+    statics()
     print(f"\n{checks} checks, {failures} FAILURES")
     return 1 if failures else 0
 

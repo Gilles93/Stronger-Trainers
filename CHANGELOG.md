@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.8.0
+
+The legendaries are level 70. Articuno, Zapdos and Moltres sat at 50 in a game
+where your rival's ace finishes at 71, so the three birds this mod had left
+alone were quietly the easiest fights in the second half. All three are 70 now,
+with movesets to match. Zapdos carries Thunderbolt, Drill Peck, Hyper Beam and
+Agility, which takes it to 200 speed. Articuno's Blizzard freezes, and a Gen 1
+freeze does not wear off. Moltres burns 30% of the time, and a burn halves your
+Attack for the rest of the fight.
+
+Mewtwo is 85 and knows Amnesia. That was always the point of Mewtwo, and it
+learns the move at 81 — at the old level 70 it could never have it. Psychic
+alone already takes two turns to kill most of what you'll bring. After one
+Amnesia it takes one. Recover makes the fight a war rather than a race, and if
+you're there to catch it, sleep locks the healing out.
+
+Every other static encounter moved with them. The ghost on Pokémon Tower 6F is
+46 and carries Toxic behind 110 base Defence, so it grinds you down instead of
+bursting you. The Route 12 Snorlax is 48 and the Route 16 one is 52, both with
+Amnesia and with Rock Slide for whatever shrugs off Earthquake; the second one
+is past Double-Edge and swings it. Neither knows Rest. A wild Pokémon picks its
+moves at random, and Amnesia plus Rest is a stall nobody can outlast.
+
+The Power Plant's item balls bite now. A level 40 Voltorb in the real game
+knows Sonicboom, Selfdestruct, Light Screen and Swift — no Electric attack at
+all, on an Electric Pokémon. All eight carry Thunderbolt and Thunder Wave, the
+two Electrodes kept their Explosion, and they sit at 46 and 50.
+
+Two new rows in the MODS menu, `STATIC ENCOUNTERS` and `STATIC MOVESETS`, and
+they behave like the boss pair: turn the second off and a legendary keeps its
+level but goes back to the moves it would have grown into.
+
+Catching them is no harder than it was. Gen 1 works the odds out from how much
+health is left as a fraction of the total and never looks at the level. Only
+living long enough to throw the ball got harder.
+
 ## 1.7.3
 
 Boss switching resolves the way it does in later generations. Gen 1 gives a
