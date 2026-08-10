@@ -75,9 +75,15 @@ def moves_for(spec, version: str):
     return list(spec)
 
 
-def build_version(version: str, boss_ace: dict):
-    """Every roster this version should carry, keyed "CLASS#party"."""
+def build_version(version: str, boss_ace: dict, rival_label: dict = None):
+    """Every roster this version should carry, keyed "CLASS#party".
+
+    `rival_label`, when given, is filled in with key -> battle label so the
+    validator can hold each rival slot to the TM gate for its own stage.
+    """
     out = {}
+    if rival_label is None:
+        rival_label = {}
 
     # --- gyms, Giovanni, Elite Four: same team everywhere, levels per version
     for table in (rosters.GYM_LEADERS, rosters.GIOVANNI, rosters.ELITE_FOUR):
@@ -102,14 +108,19 @@ def build_version(version: str, boss_ace: dict):
                 else:
                     species = rosters.YELLOW_RIVAL_BRANCHED[label][branch]
                 moves = rosters.CHAMPION_YELLOW_MOVES if label == "champion" else {}
-                team = [(sp, moves.get(sp)) for sp in species]
+                # the champion table wins where it has an entry; every other
+                # fight falls through to the per-battle rival sets
+                team = [(sp, moves.get(sp) or rosters.rival_moves(sp, label))
+                        for sp in species]
             elif label == "champion":
                 team = list(rosters.CHAMPION_RB[branch])
             else:
-                team = [(sp, None) for sp in rosters.RB_RIVAL_TEAMS[label][branch]]
+                team = [(sp, rosters.rival_moves(sp, label))
+                        for sp in rosters.RB_RIVAL_TEAMS[label][branch]]
             levels = _levels(ace, len(team))
             out[f"{cls}#{idx}"] = [
                 (sp, lv, mv) for (sp, mv), lv in zip(team, levels)]
+            rival_label[f"{cls}#{idx}"] = label
 
     # --- the Celadon Chief: an unused class in Red and absent from the other
     # two, kept only so a mod that places him gets a real team.
@@ -119,8 +130,9 @@ def build_version(version: str, boss_ace: dict):
     return out
 
 
-def validate(version: str, table):
+def validate(version: str, table, rival_label: dict = None):
     """Every failure, not just the first -- a fix pass wants the whole list."""
+    rival_label = rival_label or {}
     g = gamedata.load(version)
     data_version = TRAINER_DATA_TWIN.get(version, version)
     gd = gamedata.load(data_version)
@@ -157,6 +169,12 @@ def validate(version: str, table):
                     problems.append(
                         f"{version} {key} slot {pos}: {species} {mv} "
                         f"{BANNED_EFFECTS[g.moves[mv]['effect']]}")
+                elif availability.event_legal(species, mv):
+                    # a documented exception (availability.EVENT_LEGAL): it
+                    # skips the legality check and the TM gate together,
+                    # because a move the species cannot learn at all was
+                    # never going to be one the player could buy either
+                    pass
                 elif (availability.is_gated(key)
                       and availability.is_coverage(
                           (g.moves[mv].get("type")), key, g.types(species))
@@ -170,6 +188,13 @@ def validate(version: str, table):
                     problems.append(
                         f"{version} {key} slot {pos}: {species} L{level} "
                         f"cannot learn {mv}")
+                elif (key in rival_label
+                      and mv not in g.levelup_moves(species, level)
+                      and not availability.rival_allows(mv, rival_label[key])):
+                    problems.append(
+                        f"{version} {key} slot {pos}: {species} {mv} needs a "
+                        f"TM the player cannot own by the {rival_label[key]} "
+                        f"fight")
 
         # A slot whose best attack dwarfs its next one repeats that move
         # however the AI is scored, because using it really is correct. The
@@ -187,7 +212,18 @@ def validate(version: str, table):
                 return FIXED_AS
             return rec.get("power") or 0
 
+        # The rival is exempt before Celadon. A gym leader is met once, at a
+        # point the author chose; the rival is met at level 6 and again at 62,
+        # and before the department store a Pokemon genuinely has one good
+        # move and three filler ones. Rattata's Hyper Fang really is twice
+        # anything else it can know at 22, and the only way to satisfy the
+        # rule would be to hand him TMs the player cannot buy yet. Gym teams
+        # keep the strict version -- they are all authored past this point.
+        VARIETY_FROM_LEVEL = 40
+
         for species, level, moves in slots:
+            if key in rival_label and level < VARIETY_FROM_LEVEL:
+                continue
             powers = sorted((rated(mv) for mv in (moves or [])), reverse=True)
             powers = [p for p in powers if p > 0]
             if len(powers) >= 2 and powers[0] >= 2 * powers[1]:
@@ -284,8 +320,9 @@ def main():
     for version in VERSIONS:
         data_version = TRAINER_DATA_TWIN.get(version, version)
         _rows, boss_ace = curve.compute(data_version, curve.Settings())
-        tables[version] = build_version(version, boss_ace)
-        problems.extend(validate(version, tables[version]))
+        labels = {}
+        tables[version] = build_version(version, boss_ace, labels)
+        problems.extend(validate(version, tables[version], labels))
 
     if problems:
         print(f"FAILED: {len(problems)} problem(s)\n")

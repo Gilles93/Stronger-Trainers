@@ -232,7 +232,10 @@ end
 
 -- Which format the player picked for the gym battle now starting; shared with
 -- gym_formats.lua.  `count` nil means an ordinary full-roster battle.
-local formatState = { class = nil, count = nil, snapshot = nil }
+-- `full` and `fielded` are filled in by the party hook once the roster is
+-- actually cut, so the prize can be scaled to the fight that was fought.
+local formatState = { class = nil, count = nil, snapshot = nil,
+                      full = nil, fielded = nil }
 
 -- shared with smart_ai.lua: the layer id and test handles it publishes
 local aiState = {}
@@ -240,11 +243,16 @@ local aiState = {}
 -- Cut an authored roster down to `count`, always keeping the ace.  The ace is
 -- the highest-level slot, which the authored tables put last; survivors are
 -- re-sorted by level so it stays last and the fight still builds.
+--
+-- `>=` rather than `>` is what makes "last" true when levels tie, and the
+-- tie is the normal case on the game's own rosters rather than a corner:
+-- vanilla Erika fields Victreebel and Vileplume both at 29, and taking the
+-- first of the two dropped the Vileplume the gym is built around.
 local function trimToFormat(team, count)
   if not count or count >= #team then return team end
   local acePos, aceLevel = 1, -1
   for i, slot in ipairs(team) do
-    if slot[2] > aceLevel then acePos, aceLevel = i, slot[2] end
+    if slot[2] >= aceLevel then acePos, aceLevel = i, slot[2] end
   end
   local pool = {}
   for i, slot in ipairs(team) do
@@ -258,6 +266,35 @@ local function trimToFormat(team, count)
   local picked = { team[acePos] }
   for i = 1, count - 1 do picked[#picked + 1] = pool[i] end
   table.sort(picked, function(a, b) return a[2] < b[2] end)
+  return picked
+end
+
+-- The same cut over the engine's own slot shape ({ species = , level = })
+-- rather than an authored row.
+--
+-- It exists because the two features are independently switchable and the
+-- picker is not: with BOSS TEAMS off and GYM FORMAT CHOICE on, the leader
+-- fell through to the ordinary scaling path, which never saw the format at
+-- all.  Your side was still narrowed to what you picked, so answering "3
+-- each" fielded three against the leader's full six.
+local function trimRecords(party, count)
+  if not count or count >= #party then return party end
+  local acePos, aceLevel = 1, -1
+  for i, slot in ipairs(party) do
+    -- last of a tie wins, same rule and same reason as trimToFormat
+    if (slot.level or 0) >= aceLevel then acePos, aceLevel = i, slot.level or 0 end
+  end
+  local pool = {}
+  for i, slot in ipairs(party) do
+    if i ~= acePos then pool[#pool + 1] = slot end
+  end
+  for i = #pool, 2, -1 do
+    local j = math.random(i)
+    pool[i], pool[j] = pool[j], pool[i]
+  end
+  local picked = { party[acePos] }
+  for i = 1, count - 1 do picked[#picked + 1] = pool[i] end
+  table.sort(picked, function(a, b) return (a.level or 0) < (b.level or 0) end)
   return picked
 end
 
@@ -538,7 +575,9 @@ return function(mod)
     if team then
       -- a format the player just picked narrows the roster; the ace stays
       if formatState.count and formatState.class == oppClass then
+        formatState.full = #team
         team = trimToFormat(team, formatState.count)
+        formatState.fielded = #team
       end
       return bossParty(team, num("boss_bonus", 0),
                        mod.options:get("boss_moves") ~= false)
@@ -554,8 +593,17 @@ return function(mod)
         return evolvedSpecies(speciesDef, species, level, stone)
       end
     end
-    return scaleParty(party, num("trainer_levels", 15), num("min_party", 3),
-                      evolve, padderFor(oppClass, partyIndex, evolve))
+    local scaled = scaleParty(party, num("trainer_levels", 15),
+                              num("min_party", 3), evolve,
+                              padderFor(oppClass, partyIndex, evolve))
+    -- the leader honours the format the player just picked whether or not
+    -- its authored roster is switched on (see trimRecords)
+    if formatState.count and formatState.class == oppClass then
+      formatState.full = #scaled
+      scaled = trimRecords(scaled, formatState.count)
+      formatState.fielded = #scaled
+    end
+    return scaled
   end)
 
   -- XP payout.  `exp.gain` is consulted once per participant and the number it

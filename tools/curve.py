@@ -251,6 +251,21 @@ def compute(version: str, s: Settings, iterations: int = 8):
             if key not in progression.MARGIN_ADJUST.get(version, {}):
                 floor = max(floor, previous_ace(version, key))
             nxt[key] = max(1, min(MAX_LEVEL, max(target, floor)))
+        # Third floor: every milestone outranks the one before it.
+        #
+        # The model predicts a level, and between two fights the player only
+        # banks what the first one paid -- so late in the run consecutive
+        # milestones round to the same number. Lorelei and Bruno both landed
+        # on a 67 ace with an identical 62-67 spread, which is defensible as a
+        # prediction and wrong as a fight: the Elite Four is an escalating
+        # gauntlet, and reading the same six levels twice running makes the
+        # second member feel like a repeat of the first. One level is enough
+        # to keep the shape without arguing with the model.
+        running = 0
+        for key in progression.MILESTONES:
+            if key in nxt:
+                nxt[key] = min(MAX_LEVEL, max(nxt[key], running + 1))
+                running = nxt[key]
         if nxt == boss_ace:
             break
         boss_ace = nxt

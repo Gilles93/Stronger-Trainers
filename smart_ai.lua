@@ -56,8 +56,15 @@ return function(mod, state)
     if share >= 0.4 then return 2 end      -- a solid hit
     return 1                               -- chip
   end
-  -- one full effectiveness step on the chart's x10 scale: the improvement a
-  -- backup has to offer before a boss will spend a turn rotating to it
+  -- How much better a backup has to be before a boss will spend a turn
+  -- rotating to it, on the chart's x10 scale.
+  --
+  -- Not "one effectiveness step", whatever the old comment here said: the
+  -- number this is compared against is a DIFFERENCE of two x10 multipliers,
+  -- and a step on that scale is worth +5 going 0.5x -> 1x, +10 going 1x ->
+  -- 2x and +20 going 2x -> 4x.  10 is the neutral-to-super-effective step,
+  -- which is the one that matters: it buys a rotation that turns an even
+  -- trade into a threat, and refuses one that only stops a resist.
   local SWITCH_MIN_GAIN = 10
 
   -- effect ids as they appear in the ROM data
@@ -73,12 +80,20 @@ return function(mod, state)
   }
   -- the status a move inflicts, so a move can be checked against what the
   -- target already has instead of vanilla's blanket "has any status"
+  --
+  -- Confusion is in here for the same reason the stat moves below are: it
+  -- reached no branch at all, which left CONFUSE_RAY and SUPERSONIC sitting
+  -- at the base 10 while any attack scored under it, so neither could ever
+  -- be picked -- 24 authored roster slots carry one of them.  It is checked
+  -- against a different field than the rest (see `already` in score): gen 1
+  -- keeps confusion as a volatile on the battler, not as mon.status.
   local INFLICTS = {
     SLEEP_EFFECT = "sleep",
     POISON_EFFECT = "poison", POISON_SIDE_EFFECT1 = "poison",
     POISON_SIDE_EFFECT2 = "poison",
     PARALYZE_EFFECT = "paralysis", PARALYZE_SIDE_EFFECT1 = "paralysis",
     PARALYZE_SIDE_EFFECT2 = "paralysis",
+    CONFUSION_EFFECT = "confusion", CONFUSION_SIDE_EFFECT = "confusion",
   }
   -- cheese, suppressed on purpose
   local TRAPPING = { TRAPPING_EFFECT = true }
@@ -144,7 +159,16 @@ return function(mod, state)
     if not (battle and user and move) or user.isPlayer then return end
     if not user.mon then return end
     if HEAL[move.effect] then
-      heals[user.mon] = (heals[user.mon] or 0) + 1
+      -- This event is emitted before the effect runs (BattleState.lua:3481),
+      -- and HEAL_EFFECT refuses outright at full HP -- Rest included
+      -- (MoveEffects.lua:204, 211).  It reads the very HP this event carries,
+      -- so a heal that is about to fail is knowable here, and one that never
+      -- restored anything must not spend one of the two the boss gets.
+      local mon = user.mon
+      local full = mon.stats and mon.stats.hp and mon.hp == mon.stats.hp
+      if not full then
+        heals[mon] = (heals[mon] or 0) + 1
+      end
     end
     lastMove[user.mon] = move.id
     if (move.power or 0) == 0 then
@@ -224,7 +248,16 @@ return function(mod, state)
     -- against an already-paralysed target -- it is a fine attack either way.
     local want = isStatusMove and INFLICTS[def.effect]
     if want then
-      if target.mon and target.mon.status then
+      -- "it already has that" reads a different field per family: confusion
+      -- is a volatile counter on the battler (MoveEffects.lua:154 refuses a
+      -- second application), everything else is the persistent mon.status
+      local already
+      if want == "confusion" then
+        already = target.confusedTurns ~= nil
+      else
+        already = target.mon ~= nil and target.mon.status ~= nil
+      end
+      if already then
         adj = adj + 4                      -- already statused: pointless
       elseif finishing then
         adj = adj + 2                      -- too late to be worth a turn
@@ -306,18 +339,104 @@ return function(mod, state)
   -- per-battle bookkeeping; weak keys so a finished battle is collectable
   local switching = setmetatable({}, { __mode = "k" })
 
+  -- The two halves of the "resolve it first" fix below, both weak-keyed on
+  -- the outgoing battler so they go with the battle.  They are separate
+  -- because they have opposite lifetimes: `rotating` answers exactly one
+  -- turn-order question and is consumed doing it, while `withdrawn` has to
+  -- outlive the switch so the player's row -- which runs after it -- can
+  -- still recognise the Pokemon it was aimed at.  Leaving `withdrawn` set is
+  -- safe: every send-out builds a fresh battler, so an entry can never
+  -- describe whoever is on the field later.
+  local rotating = setmetatable({}, { __mode = "k" })
+  local withdrawn = setmetatable({}, { __mode = "k" })
+
   local function recordFor(battle)
     local rec = switching[battle]
     if not rec then
-      rec = { count = 0, index = battle.enemyIndex, since = -1 }
+      -- `seen` counts this Pokemon's own action decisions since it came out.
+      -- The lead starts at 1 so its opening decision may still rotate, the
+      -- way it always has; every later send-out starts at 0 and owes a turn
+      -- on the field before it may leave again.
+      rec = { count = 0, index = battle.enemyIndex, seen = 1 }
       switching[battle] = rec
     end
-    -- a send-out (ours or a faint replacement) restarts the grace turn
+    -- Settle the last rotation against what actually happened.  The decision
+    -- is made a turn ahead of the action that carries it out, and executeAction
+    -- drops the whole row if the Pokemon is knocked out before it comes up
+    -- (BattleState.lua:3173), so a rotation can be chosen and never run.
+    -- Charging the fight's switch allowance for one that never happened cost
+    -- the boss a rotation it never got to make.  Counted optimistically and
+    -- refunded here rather than counted on confirmation, because the failure
+    -- that matters is the other one: a cap that never fills would let a boss
+    -- rotate every turn for the rest of the fight.
+    if rec.pending then
+      if battle.enemyIndex ~= rec.pending then
+        rec.count = math.max(0, rec.count - 1)
+      end
+      rec.pending = nil
+    end
+    -- a send-out (ours or a faint replacement) starts the count again
     if rec.index ~= battle.enemyIndex then
       rec.index = battle.enemyIndex
-      rec.since = battle.turnCount or 0
+      rec.seen = 0
     end
+    rec.seen = rec.seen + 1
     return rec
+  end
+
+  -- Rotating first, the way every generation from 2 on does it.
+  --
+  -- Gen 1 gives the trainer's item/switch the enemy's own slot in the turn
+  -- order -- pokered runs TrainerAI where ExecuteEnemyMove would have gone --
+  -- and BattleState.resolveTurn is faithful to that: an aiSwitch action
+  -- carries no move id, so orderMove hands TurnOrder a nil move, priority is
+  -- 0 on both sides and the faster mon goes first.  A player faster than the
+  -- boss therefore spends the turn hitting the Pokemon that is already on its
+  -- way out, which is what gets reported as "it switched after I attacked".
+  --
+  -- Two things have to move together, and the second is why this is not a
+  -- one-line answer to battle.turn_order:
+  --
+  --   * order.  battle.turn_order is the engine's own choke point for who
+  --     goes first, so the rotation turn answers "the enemy" there and every
+  --     other turn falls through to the vanilla speed compare untouched.
+  --   * target.  resolveTurn builds BOTH rows of the turn -- each a
+  --     {user, target, action} triple -- before either one runs, so the
+  --     player's row holds the battler that was out when the turn began.  The
+  --     rotation replaces battle.enemy with a fresh battler, which leaves
+  --     that row aimed at a Pokemon that has left the field: the send-out
+  --     message would play and the attack would still land on the one that
+  --     withdrew.  Vanilla only reaches this when a Juggler or Agatha rolls
+  --     a switch while faster; rotating on purpose makes it every time.
+  --
+  -- The retarget is installed on the battle INSTANCE -- Lua finds it before
+  -- BattleState.__index does -- and only on a fight this mod has actually
+  -- rotated in, so wild battles, ordinary trainers and the link-battle
+  -- lockstep never see it.  The class method is read at call time so a
+  -- class-level wrap by another mod still composes.  Returns false when the
+  -- engine module is out of reach, and the caller then leaves the turn order
+  -- alone too: vanilla ordering is the wrong feel, a send-out that hits the
+  -- wrong Pokemon is a broken battle.
+  local function installRetarget(battle)
+    if rawget(battle, "executeAction") then return true end
+    local ok, BattleState = pcall(require, "src.battle.BattleState")
+    if not (ok and type(BattleState) == "table"
+            and type(BattleState.executeAction) == "function") then
+      return false
+    end
+    battle.executeAction = function(self, user, target, action)
+      -- `target ~= self.enemy` is what makes this fire only once the switch
+      -- has really happened, and the HP test keeps it off the other way a
+      -- battler leaves the field: a Pokemon that fainted mid-turn must go on
+      -- reaching the vanilla no-op rather than handing its row to whatever
+      -- replaced it.
+      if target and withdrawn[target] and target ~= self.enemy
+         and target.mon and (target.mon.hp or 0) > 0 then
+        target = self.enemy
+      end
+      return BattleState.executeAction(self, user, target, action)
+    end
+    return true
   end
 
   local function typesFor(battle, mon)
@@ -336,12 +455,42 @@ return function(mod, state)
     return top
   end
 
+  -- What a Pokemon of ours actually threatens: the best multiplier any of its
+  -- damaging MOVES lands on what the player has out.
+  --
+  -- Reading our own movesets is not a fairness question -- it is our own team,
+  -- and the rule this file holds to is about never reading the PLAYER's. It is
+  -- also the difference between the rotation meaning something and not: judged
+  -- on species types, a mono-type roster has nothing better to rotate to, ever.
+  -- Blaine is six Fire and Surge is six Electric, so between them they could
+  -- not rotate in a single one of the 456 lead-vs-player matchups the type
+  -- chart allows -- while Blaine's Magmar sits on the bench carrying Psychic
+  -- and Submission, which is exactly the answer the rotation exists to find.
+  --
+  -- Species types stay the proxy for what the PLAYER threatens, because that
+  -- is the half we are not allowed to look up.
+  local function threatOf(battle, moves, ownTypes, theirs)
+    local dex = battle.data and battle.data.moves
+    local top
+    for _, mv in ipairs(moves or {}) do
+      local def = dex and mv and dex[mv.id]
+      if def and (def.power or 0) > 0 and def.type then
+        local m = TypeChart.effectiveness(def.type, theirs)
+        if not top or m > top then top = m end
+      end
+    end
+    -- no readable moveset (a slot the engine filled in, or a status-only
+    -- set): fall back to species types, which is what this always did
+    if not top then return bestAgainst(ownTypes, theirs) end
+    return top
+  end
+
   -- How well a Pokemon of `mine` fares against what the player has out:
   -- what it threatens, less what it is threatened by.  0 is an even trade.
-  local function matchup(battle, mine)
+  local function matchup(battle, mine, moves)
     local theirs = battle.player and battle.player.curTypes
     if not (mine and theirs and #mine > 0 and #theirs > 0) then return nil end
-    return bestAgainst(mine, theirs) - bestAgainst(theirs, mine)
+    return threatOf(battle, moves, mine, theirs) - bestAgainst(theirs, mine)
   end
 
   -- Would the Pokemon already out finish the player this turn?  Switching
@@ -373,12 +522,31 @@ return function(mod, state)
     local cap = math.floor(tonumber(mod.options:get("boss_switch_cap")) or 2)
     if cap <= 0 then return nil end
 
+    -- Never in place of a forced action.  BattleState.lockedAction is what
+    -- the vanilla chain would have answered with here, and it covers a Hyper
+    -- Beam recharge, a Thrash/Petal Dance/Rage lock, a charging two-turn
+    -- move, the boss's own Wrap, Bide -- and being held in place by the
+    -- PLAYER's Wrap or Fire Spin, which is the one that matters.  Returning
+    -- a switch ahead of it let a boss walk out of a trap the player spent a
+    -- turn setting, and skip the Hyper Beam recharge this file's own scoring
+    -- layer charges it three points for.  Sixteen roster slots carry Hyper
+    -- Beam and six carry Thrash or Petal Dance, so it was not theoretical.
+    local known, locked = pcall(battle.lockedAction, battle, battle.enemy)
+    if known and locked then return nil end
+
     local rec = recordFor(battle)
     if rec.count >= cap then return nil end
-    -- one full turn on the field before it may rotate again
-    if (battle.turnCount or 0) <= rec.since then return nil end
+    -- One action on the field before it may rotate again.  Counting the
+    -- enemy's own decisions rather than battle.turnCount is deliberate: only
+    -- resolveTurn advances turnCount, so a turn the player spent on an item,
+    -- a ball, a failed run or a switch of their own never moved it -- and
+    -- resolveTurn reads the enemy's action BEFORE it increments, which is
+    -- what let the old `turnCount <= since` compare pass on the very next
+    -- turn and rotate a Pokemon straight back out of its own send-out.
+    if rec.seen < 2 then return nil end
 
-    local current = matchup(battle, battle.enemy and battle.enemy.curTypes)
+    local current = matchup(battle, battle.enemy and battle.enemy.curTypes,
+                            battle.enemy and battle.enemy.curMoves)
     -- unknown types mean no informed call is available; leave the turn alone
     if current == nil or current >= 0 then return nil end
     if canFinish(battle) then return nil end
@@ -386,7 +554,7 @@ return function(mod, state)
     local pick, pickScore
     for i, mon in ipairs(battle.enemyParty or {}) do
       if i ~= battle.enemyIndex and (mon.hp or 0) > 0 then
-        local score = matchup(battle, typesFor(battle, mon))
+        local score = matchup(battle, typesFor(battle, mon), mon.moves)
         if score and (not pickScore or score > pickScore) then
           pick, pickScore = i, score
         end
@@ -396,7 +564,15 @@ return function(mod, state)
 
     rec.count = rec.count + 1
     rec.index = pick
-    rec.since = battle.turnCount or 0
+    rec.pending = pick      -- ... unless the engine never runs it; see recordFor
+    rec.seen = 0            -- the one coming in owes its turn on the field
+    -- mark the outgoing battler only once the retarget is really in place;
+    -- both the turn-order answer and the retarget key off this, so they can
+    -- never be half-applied
+    if battle.enemy and installRetarget(battle) then
+      rotating[battle.enemy] = true
+      withdrawn[battle.enemy] = true
+    end
     return { special = "aiSwitch", index = pick }
   end
 
@@ -409,6 +585,20 @@ return function(mod, state)
       local ok, action = pcall(considerSwitch, battle, bosses)
       if ok and type(action) == "table" then return action end
       return next(battle)
+    end)
+
+    -- The rotation goes first (see `installRetarget`).  resolveTurn asks this
+    -- straight after the action above is chosen, so the outgoing battler is
+    -- still the one on the field and `withdrawn` is the only thing that has
+    -- to be true.  Every other turn -- and every wild, link or ordinary
+    -- trainer battle, which never mark it -- falls through to the vanilla
+    -- speed compare with the arguments untouched.
+    mod.hooks:wrap("battle.turn_order", function(next, _player, _pMove, enemy)
+      if enemy and rotating[enemy] then
+        rotating[enemy] = nil    -- one turn's question, answered
+        return false             -- "the player moves first" -- not this turn
+      end
+      return next()
     end)
 
     mod.content.ai_classes:register(LAYER_ID, {

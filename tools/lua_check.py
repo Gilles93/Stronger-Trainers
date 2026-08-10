@@ -83,6 +83,19 @@ def roster_table():
         table = teams[version]
         count = sum(1 for _ in table.keys())
         check(count > 25, f"{version} carries {count} rosters")
+
+        # Every slot carries a moveset. A slot with none is not a lighter
+        # roster, it is a different fight: the engine fills it with the last
+        # four moves the species learns by growing up, which is how the Silph
+        # Co. rival ended up leading with a Rhydon whose best attack was Fury
+        # Attack at 15 power. Every rival fight shipped that way.
+        bare = []
+        for key in table.keys():
+            for i, slot in enumerate(table[key].values(), start=1):
+                if slot[3] is None:
+                    bare.append(f"{key} slot {i} {slot[1]}")
+        eq(len(bare), 0, f"{version}: every boss slot has an authored moveset"
+                         + (" -- " + "; ".join(bare[:3]) if bare else ""))
     return teams
 
 
@@ -102,6 +115,25 @@ stubs["src.battle.Damage"] = {
   -- never enough to finish anything, so canFinish() cannot mask a switch
   compute = function() return 0 end,
 }
+-- Only executeAction matters here: the switching fix shadows it per battle
+-- instance so the player's row cannot land on a Pokemon that already left.
+-- Recording the triple it was finally handed is the whole assertion.
+stubs["src.battle.BattleState"] = {
+  executeAction = function(self, user, target, action)
+    self.executed = { user = user, target = target, action = action }
+  end,
+}
+-- gym_formats.lua reaches for five UI/script modules at install time. Stubbed
+-- to nothing useful on purpose: the picker itself is not under test here, but
+-- without them the whole file fails to install and its battle.started and
+-- battle.ended handlers -- the prize scaling and the party restore -- never
+-- register at all, which is how the prize bug hid.
+stubs["src.script.MapScripts"] = { baseTalk = function() return nil end }
+stubs["src.render.TextBox"] = { new = function() return {} end }
+stubs["src.ui.QuantityBox"] = { isOpaque = function() return true end }
+stubs["src.ui.PartyMenu"] = { new = function() return {} end }
+stubs["src.core.Strings"] = setmetatable({}, {
+  __call = function(_, fmt) return tostring(fmt) end })
 stubs["src.battle.TypeChart"] = {
   effectiveness = function(moveType, defenderTypes)
     local mult = 10
@@ -157,11 +189,18 @@ local mod = {
   hooks = {
     wrap = function(_, name, fn) recorded.hooks[name] = fn end,
   },
-  events = { on = function(_, name, fn) recorded.events[name] = fn end },
+  -- a list per name, not one handler: main.lua, gym_formats.lua and
+  -- smart_ai.lua all listen to battle.started, and the engine fires all three
+  events = { on = function(_, name, fn)
+    local list = recorded.events[name]
+    if not list then list = {}; recorded.events[name] = list end
+    list[#list + 1] = fn
+  end },
   content = {
     pokemon = registry(DATA.pokemon),
     encounters = registry(DATA.encounters),
     trainers = registry(), ai_classes = registry(),
+    map_scripts = registry(),
   },
   exports = {},
 }
@@ -171,8 +210,7 @@ chunk()(mod)
 
 return { mod = mod, recorded = recorded, options = optionValues,
          fire = function(name, ev)
-           local fn = recorded.events[name]
-           if fn then fn(ev) end
+           for _, fn in ipairs(recorded.events[name] or {}) do fn(ev) end
          end }
 """
 
@@ -332,8 +370,77 @@ def behaviour():
         check(stable, "a trainer's padded team is stable across encounters")
 
 
+def formats():
+    print("\n== gym battle formats")
+    g = gamedata.load("red")
+    lua, env = run_mod("red", g)
+    hook = env["recorded"]["hooks"]["trainer.party"]
+    state = env["mod"]["exports"]["formatState"]
+
+    def leader(cls="OPP_BROCK"):
+        vanilla = g.trainers[cls][0]
+        base = lua.table_from([
+            lua.table_from({"species": s, "level": l}) for s, l in vanilla])
+        got = hook(lambda: base, cls, 1, base)
+        return [got[i]["species"] for i in range(1, len(list(got.values())) + 1)]
+
+    state["class"], state["count"] = None, None
+    eq(len(leader()), 6, "no format picked leaves the full authored roster")
+
+    # The one documented break from move legality, asserted so it cannot
+    # quietly spread: Surge's Pikachu line carries Surf (the Stadium Surfing
+    # Pikachu, which this engine already recognises), and nothing else does.
+    import availability
+    eq(sorted(availability.EVENT_LEGAL),
+       [("PIKACHU", "SURF"), ("RAICHU", "SURF")],
+       "exactly two moves are exempt from legality")
+
+    state["class"], state["count"] = "OPP_BROCK", 3
+    eq(len(leader()), 3, "a 3-each format cuts the authored roster to three")
+
+    # The picker narrows YOUR side whatever the other toggles say, so the
+    # leader has to honour the same number on the ordinary scaling path --
+    # with BOSS TEAMS off it never used to, and "2 each" fielded 2 against 3.
+    env["options"]["boss_teams"] = False
+    state["count"] = 2
+    eq(len(leader()), 2, "and cuts the leader's own party with BOSS TEAMS off")
+
+    # Whichever roster it cuts, the ace survives -- and a tie at the top is
+    # the normal case on the game's own rosters, not a corner: vanilla Erika
+    # fields Victreebel and Vileplume both at 29, and taking the first of the
+    # two dropped the Vileplume the gym is built around.
+    state["class"] = "OPP_ERIKA"
+    kept = leader("OPP_ERIKA")
+    check("VILEPLUME" in kept,
+          f"a tied ace keeps the roster's last slot (kept {kept})")
+
+    # A shorter fight pays a shorter purse. Gen 1 reads prize money off the
+    # LAST enemy Pokemon's level and the trim keeps the ace last, so "2 each"
+    # used to pay exactly what "6 each" did.
+    env["options"]["boss_teams"] = True
+    state["class"], state["count"] = "OPP_BROCK", 2
+    leader()                                   # the hook records full/fielded
+    battle = lua.table_from({
+        "oppClass": "OPP_BROCK",
+        "trainer": lua.table_from({"baseMoney": 99}),
+    })
+    env["fire"]("battle.started", lua.table_from({"battle": battle}))
+    eq(battle["trainer"]["baseMoney"], 33,
+       "a 2-of-6 gym battle pays a third of the purse")
+
+    # and a full-size fight is left alone
+    state["class"], state["count"] = "OPP_BROCK", 6
+    leader()
+    full = lua.table_from({
+        "oppClass": "OPP_BROCK",
+        "trainer": lua.table_from({"baseMoney": 99}),
+    })
+    env["fire"]("battle.started", lua.table_from({"battle": full}))
+    eq(full["trainer"]["baseMoney"], 99, "a full roster pays the full purse")
+
+
 SWITCH_TEST = """
-local aiState, DATA = ...
+local aiState, DATA, hooks = ...
 local consider = aiState.considerSwitch
 if type(consider) ~= "function" then return { missing = true } end
 
@@ -341,15 +448,18 @@ local function battler(types)
   return { curTypes = types, curMoves = {},
            mon = { hp = 100, stats = { hp = 100 }, level = 50 } }
 end
-local function mon(species)
-  return { species = species, hp = 100, stats = { hp = 100 }, level = 50 }
+local function mon(species, moves)
+  return { species = species, hp = 100, stats = { hp = 100 }, level = 50,
+           moves = moves }
 end
 local function battle(oppClass, playerTypes, enemyTypes, bench, turn)
+  local party = {}
+  for i, species in ipairs(bench) do party[i] = mon(species) end
   return {
     kind = "trainer", oppClass = oppClass, turnCount = turn or 5,
     enemyIndex = 1, data = DATA,
     player = battler(playerTypes), enemy = battler(enemyTypes),
-    enemyParty = { mon(bench[1]), mon(bench[2]) },
+    enemyParty = party,
   }
 end
 
@@ -364,11 +474,27 @@ out.rotates = act ~= nil and act.index == 2
 out.holds = consider(battle("OPP_BLAINE", { "GRASS" }, { "FIRE" },
                             { "ARCANINE", "LAPRAS" })) == nil
 
--- a grace turn after every send-out, so it cannot ping-pong
-local fresh = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
-                     { "ARCANINE", "LAPRAS" }, 0)
-consider(fresh)
-out.graceTurn = consider(fresh) == nil
+-- A Pokemon that just came in owes a turn on the field before it may leave
+-- again.  turnCount is advanced by one between decisions here on purpose:
+-- that is the real shape of the next turn, and the old `turnCount <= since`
+-- compare waved it straight through because resolveTurn reads the enemy's
+-- action BEFORE it increments.
+local pong = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
+                    { "ARCANINE", "LAPRAS", "VAPOREON" })
+local first = consider(pong)
+pong.enemyIndex = first and first.index or 2   -- the send-out happened
+pong.turnCount = pong.turnCount + 1
+out.graceTurn = consider(pong) == nil
+pong.turnCount = pong.turnCount + 1
+out.graceEnds = consider(pong) ~= nil
+
+-- a forced action is not something to rotate out of: the vanilla chain would
+-- have answered with a Hyper Beam recharge, a thrash, or being held by the
+-- player's Wrap, and walking out of one is the boss cheating
+local held = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
+                    { "ARCANINE", "LAPRAS" })
+held.lockedAction = function() return { special = "bound" } end
+out.locked = consider(held) == nil
 
 -- ordinary trainers never rotate
 out.bossesOnly = consider(battle("OPP_YOUNGSTER", { "WATER" }, { "FIRE" },
@@ -378,16 +504,91 @@ out.bossesOnly = consider(battle("OPP_YOUNGSTER", { "WATER" }, { "FIRE" },
 out.noPointless = consider(battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
                                   { "ARCANINE", "NINETALES" })) == nil
 
--- the cap is respected
+-- The cap is respected, counting rotations that really land: each accepted
+-- one moves enemyIndex to the Pokemon it picked, the way the send-out does.
+-- (Holding enemyIndex still instead would be the phantom case below, which
+-- is refunded on purpose and would never reach the cap at all.)
 local capped = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
-                      { "ARCANINE", "LAPRAS" })
+                      { "ARCANINE", "LAPRAS", "VAPOREON" })
 local n = 0
 for i = 1, 8 do
-  capped.turnCount = capped.turnCount + 2
-  capped.enemyIndex = 1
-  if consider(capped) then n = n + 1 end
+  capped.turnCount = capped.turnCount + 1
+  local act = consider(capped)
+  if act then
+    n = n + 1
+    capped.enemyIndex = act.index
+  end
 end
-out.capped = n <= 2
+out.capped = n == 2
+
+-- A mono-type roster can still rotate, because what a Pokemon threatens is
+-- read off its own MOVES rather than its species.  Six Fire Pokemon have no
+-- better species to rotate to, ever -- Blaine and Surge between them could
+-- not fire once across every matchup the type chart allows -- but one of
+-- those six is carrying Psychic and Submission, which is the answer the
+-- rotation exists to find.
+local mono = battle("OPP_BLAINE", { "ROCK" }, { "FIRE" }, { "PONYTA", "MAGMAR" })
+mono.enemy.curMoves = { { id = "FIRE_BLAST" } }
+mono.enemyParty[1].moves = { { id = "FIRE_BLAST" } }
+mono.enemyParty[2].moves = { { id = "SUBMISSION" } }
+local monoAct = consider(mono)
+out.monoRotates = monoAct ~= nil and monoAct.index == 2
+
+-- and a bench that really has no answer still holds its turn
+local noAnswer = battle("OPP_BLAINE", { "ROCK" }, { "FIRE" },
+                        { "PONYTA", "RAPIDASH" })
+noAnswer.enemy.curMoves = { { id = "FIRE_BLAST" } }
+noAnswer.enemyParty[1].moves = { { id = "FIRE_BLAST" } }
+noAnswer.enemyParty[2].moves = { { id = "FIRE_BLAST" } }
+out.monoHolds = consider(noAnswer) == nil
+
+-- A rotation the engine never carried out does not spend one of them.  The
+-- decision is made a turn ahead of the action, and executeAction drops the
+-- whole row if the Pokemon is knocked out first, so enemyIndex staying put
+-- is the tell.  Left uncorrected, a boss lost rotations it never made.
+local dropped = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
+                       { "ARCANINE", "LAPRAS", "VAPOREON" })
+local phantom = 0
+for i = 1, 6 do
+  -- enemyIndex is deliberately never moved: the switch did not happen
+  if consider(dropped) then phantom = phantom + 1 end
+end
+out.refunded = phantom > 2
+
+-- ---------------------------------------------------------- when it resolves
+-- The rotation goes first and the player's move follows it onto whatever
+-- came IN.  Both halves are checked, because forcing the order without the
+-- retarget is worse than the bug: the send-out plays and the attack still
+-- lands on the Pokemon that withdrew.
+local order = hooks["battle.turn_order"]
+out.orderHooked = type(order) == "function"
+if out.orderHooked then
+  local turn = battle("OPP_BLAINE", { "WATER" }, { "FIRE" },
+                      { "ARCANINE", "LAPRAS" })
+  local leaving = turn.enemy
+  local rotation = consider(turn)
+  out.rotationDecided = rotation ~= nil
+
+  local function ask(b)
+    return order(function() return true end, b.player, nil, b.enemy, nil, {})
+  end
+  out.enemyFirst = ask(turn) == false
+  -- and only for the turn it rotates on
+  out.laterTurnsUntouched = ask(turn) == true
+
+  -- the engine now swaps battle.enemy for a fresh battler, while the row it
+  -- built for the player still names the one that left
+  turn.enemyIndex = rotation and rotation.index or 2
+  turn.enemy = battler({ "WATER" })
+  turn:executeAction(turn.player, leaving, { id = "SURF" })
+  out.retargeted = turn.executed ~= nil and turn.executed.target == turn.enemy
+
+  -- but a battler that left by FAINTING keeps its row, so the engine's own
+  -- "the target is down, do nothing" guard still gets to run
+  leaving.mon.hp = 0
+  turn:executeAction(turn.player, leaving, { id = "SURF" })
+  out.faintedKeepsRow = turn.executed.target == leaving
+end
 return out
 """
 
@@ -405,18 +606,40 @@ def switching():
         "pokemon": lua.table_from({k: lua.table_from(
             {"types": lua.table_from(list(v["types"]))})
             for k, v in g.species.items()}),
-        "moves": lua.table_from({}),
+        # real move records: what a Pokemon threatens is read off its own
+        # moves now, so the fixture needs their types and powers
+        "moves": lua.table_from({
+            mid: lua.table_from({
+                "id": mid, "power": rec.get("power") or 0,
+                "accuracy": rec.get("accuracy") or 100,
+                "type": rec.get("type"), "effect": rec.get("effect"),
+            }) for mid, rec in g.moves.items()}),
     })
     runner = lua.execute(
         "return function(src) return assert(loadstring(src, '@switch')) end")
-    out = runner(SWITCH_TEST)(ai, data)
+    out = runner(SWITCH_TEST)(ai, data, env["recorded"]["hooks"])
     check(not out["missing"], "considerSwitch is exported")
     check(out["rotates"], "an outclassed boss rotates to the backup that answers")
     check(out["holds"], "a boss with the advantage keeps its turn")
     check(out["graceTurn"], "no second rotation the turn a Pokemon came out")
+    check(out["graceEnds"], "and it may rotate again once that turn is spent")
+    check(out["locked"], "no rotating out of a recharge, a thrash or a Wrap")
     check(out["bossesOnly"], "ordinary trainers never rotate")
     check(out["noPointless"], "no rotation when no backup is actually better")
     check(out["capped"], "the per-fight switch cap holds")
+    check(out["refunded"], "a rotation the engine dropped costs nothing")
+    check(out["monoRotates"], "a mono-type roster rotates on its movesets")
+    check(out["monoHolds"], "but not when the bench carries the same answer")
+
+    print("\n== when a rotation resolves")
+    check(out["orderHooked"], "battle.turn_order is wrapped")
+    if not out["orderHooked"]:
+        return
+    check(out["rotationDecided"], "the rotation under test was decided")
+    check(out["enemyFirst"], "the rotation resolves before the player's move")
+    check(out["laterTurnsUntouched"], "every other turn keeps vanilla order")
+    check(out["retargeted"], "the player's move follows onto what came in")
+    check(out["faintedKeepsRow"], "a fainted target is left for the engine's guard")
 
 
 
@@ -463,6 +686,31 @@ out.repeatCosts = after > before
 
 -- and a stat move said twice is discouraged beyond the repeat damper alone
 out.saidOnce = after - before >= 1
+
+-- Confuse Ray and Supersonic reached no branch at all, so they kept the base
+-- 10 -- unpickable next to any attack, on 24 authored roster slots
+local clean = view(100)
+out.confuseBeatsBase = scoreFor(clean, DATA.moves.CONFUSE_RAY, 10, bosses) < 10
+-- but not at a target that is already confused: gen 1 keeps that as a
+-- volatile on the battler, not as mon.status
+local confused = view(100)
+confused.target.confusedTurns = 3
+out.confuseRedundant =
+  scoreFor(confused, DATA.moves.CONFUSE_RAY, 10, bosses) > 10
+
+-- A heal is capped per Pokemon per battle, and HEAL_EFFECT refuses outright
+-- at full HP, so a heal that restored nothing must not spend one of them.
+-- battle.move_used carries the HP the effect is about to read, which is what
+-- makes the difference knowable at all.
+local hv, healer = view(100)
+healer.mon.hp = healer.mon.stats.hp
+fire("battle.move_used", { battle = hv.battle, user = healer,
+                           move = DATA.moves.RECOVER })
+out.failedHealFree = (aiState.heals()[healer.mon] or 0) == 0
+healer.mon.hp = 40
+fire("battle.move_used", { battle = hv.battle, user = healer,
+                           move = DATA.moves.RECOVER })
+out.realHealCounts = (aiState.heals()[healer.mon] or 0) == 1
 return out
 """
 
@@ -493,12 +741,18 @@ def scoring():
           "an attack with a status side effect is judged as an attack")
     check(out["repeatCosts"], "last turn's move costs a point this turn")
     check(out["saidOnce"], "a stat move already used is discouraged again")
+    check(out["confuseBeatsBase"], "a confusion move can now be chosen")
+    check(out["confuseRedundant"],
+          "but not at a target that is already confused")
+    check(out["failedHealFree"], "a heal that would fail spends no heal")
+    check(out["realHealCounts"], "and one that lands still counts")
 
 
 def main():
     compile_all()
     roster_table()
     behaviour()
+    formats()
     switching()
     scoring()
     print(f"\n{checks} checks, {failures} FAILURES")

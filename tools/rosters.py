@@ -54,8 +54,8 @@ GYM_LEADERS = {
     # Slide is kept for Rhyhorn and the Onix.
     "OPP_BROCK#1": [
         ("GEODUDE",   ["BODY_SLAM", "DEFENSE_CURL"]),
-        ("SANDSHREW", ["SCRATCH", "SWIFT", "SAND_ATTACK"]),
-        ("RHYHORN",   ["ROCK_SLIDE", "HORN_ATTACK", "BODY_SLAM"]),
+        ("SANDSHREW", ["SWIFT", "SAND_ATTACK"]),
+        ("RHYHORN",   ["ROCK_SLIDE", "BODY_SLAM", "HORN_ATTACK"]),
         ("KABUTO",    ["BODY_SLAM", "HARDEN"]),
         # Yellow's Brock sits two levels lower, and Rock Throw arrives at 16
         # for the Geodude line and 19 for Onix, so Yellow falls back to the TM
@@ -74,25 +74,36 @@ GYM_LEADERS = {
     # one.
     "OPP_MISTY#1": [
         ("PSYDUCK",   ["WATER_GUN", "SCRATCH", "DOUBLE_TEAM"]),
-        ("SHELLDER",  ["WATER_GUN", "SUPERSONIC", "WITHDRAW"]),
+        ("SHELLDER",  ["WATER_GUN", "SUPERSONIC", "WITHDRAW", "TACKLE"]),
         ("SEADRA",    ["BUBBLEBEAM", "SWIFT", "TOXIC", "SMOKESCREEN"]),
-        ("POLIWHIRL", ["BUBBLEBEAM", "BODY_SLAM", "HYPNOSIS", "DOUBLESLAP"]),
+        ("POLIWHIRL", ["BUBBLEBEAM", "BODY_SLAM", "HYPNOSIS", "DOUBLE_TEAM"]),
         ("STARYU",    ["WATER_GUN", "SWIFT", "THUNDER_WAVE", "HARDEN"]),
         ("STARMIE",   ["BUBBLEBEAM", "TRI_ATTACK", "THUNDER_WAVE", "RECOVER"]),
     ],
-    # Electric. Weak to Ground, which Electric moves cannot touch at all, so
-    # the answers are Raichu's Submission (2x into Rock) and Electrode's
-    # Toxic for anything bulky enough to sit there.
+    # Electric. Weak to Ground, which Electric moves cannot touch at all --
+    # the only gym in the game whose weakness its own type has no answer to.
+    # So the answer is the Surfing Pikachu: not learnable in the cartridge,
+    # but a real Gen 1 Pokemon (Pokemon Stadium handed one out) and one this
+    # engine already knows about -- yellow_beach_house.lua looks for exactly
+    # a PIKACHU carrying SURF and opens the surfing minigame on a hit. Water
+    # is 2x back into Ground and Rock, and Surf carries through evolution,
+    # so the Raichu is the same Pikachu later. See availability.EVENT_LEGAL.
+    #
+    # It is the one deliberate break from "nothing carries a move it could
+    # not have learned", and it is a sharp one: Raichu's Special is 90, so
+    # its Surf one-shots any Ground type the player can field at three
+    # badges. Pikachu's, at Special 40, is a two-hit warning shot -- which
+    # is the point of it arriving second and the Raichu arriving last.
     "OPP_LT_SURGE#1": [
         # Voltorb and Electrode have no level-up Electric attack at all, so
         # they take the Thunderbolt; everything in the Pikachu and Magnemite
         # lines learns Thundershock and uses that instead.
         ("VOLTORB",   ["THUNDERBOLT", "SONICBOOM", "SCREECH", "DOUBLE_TEAM"]),
-        ("PIKACHU",   ["THUNDERSHOCK", "QUICK_ATTACK", "THUNDER_WAVE", "SWIFT"]),
+        ("PIKACHU",   ["THUNDERSHOCK", "SURF", "THUNDER_WAVE", "SWIFT"]),
         ("MAGNEMITE", ["THUNDERSHOCK", "SONICBOOM", "SUPERSONIC", "THUNDER_WAVE"]),
         ("ELECTRODE", ["THUNDERBOLT", "SCREECH", "TOXIC", "SWIFT"]),
         ("MAGNETON",  ["THUNDERSHOCK", "SWIFT", "DOUBLE_TEAM", "THUNDER_WAVE"]),
-        ("RAICHU",    ["THUNDERBOLT", "SEISMIC_TOSS", "BODY_SLAM", "AGILITY"]),
+        ("RAICHU",    ["THUNDERBOLT", "SURF", "BODY_SLAM", "AGILITY"]),
     ],
     # Grass. Weak to Fire/Ice/Poison/Flying/Bug -- the worst-covered type in
     # Gen 1, so the threat here is status: powder into Toxic, with
@@ -106,7 +117,7 @@ GYM_LEADERS = {
         ("WEEPINBELL", ["RAZOR_LEAF", "ACID", "STUN_SPORE", "GROWTH"]),
         ("EXEGGUTOR",  ["PSYCHIC_M", "HYPNOSIS", "REFLECT", "LEECH_SEED"]),
         ("VICTREEBEL", ["RAZOR_LEAF", "ACID", "BODY_SLAM", "SLEEP_POWDER"]),
-        ("VILEPLUME",  ["PETAL_DANCE", "MEGA_DRAIN", "TOXIC", "STUN_SPORE"]),
+        ("VILEPLUME",  ["PETAL_DANCE", "BODY_SLAM", "TOXIC", "STUN_SPORE"]),
     ],
     # Poison. Weak to Ground/Psychic/Bug. Golbat is outright immune to
     # Ground, Arbok answers it with Earthquake of its own, and Muk/Weezing
@@ -125,7 +136,7 @@ GYM_LEADERS = {
     # attacks entirely.
     "OPP_SABRINA#1": [
         ("MR_MIME",   ["PSYCHIC_M", "THUNDERBOLT", "BARRIER", "SEISMIC_TOSS"]),
-        ("VENOMOTH",  ["PSYCHIC_M", "PSYBEAM", "SLEEP_POWDER", "DOUBLE_TEAM"]),
+        ("VENOMOTH",  ["PSYCHIC_M", "PSYBEAM", "MEGA_DRAIN", "SLEEP_POWDER"]),
         ("KADABRA",   ["PSYCHIC_M", "RECOVER", "REFLECT", "THUNDER_WAVE"]),
         ("HYPNO",     ["PSYCHIC_M", "HYPNOSIS", "BODY_SLAM", "REST"]),
         ("EXEGGUTOR", ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "REFLECT"]),
@@ -135,12 +146,12 @@ GYM_LEADERS = {
     # answers are Ground and Fighting moves: Growlithe and Arcanine dig,
     # Magmar takes Rock apart with Submission.
     "OPP_BLAINE#1": [
-        ("PONYTA",    ["FIRE_BLAST", "STOMP", "BODY_SLAM", "TAKE_DOWN"]),
-        ("GROWLITHE", ["FIRE_BLAST", "TAKE_DOWN", "BODY_SLAM", "AGILITY"]),
-        ("MAGMAR",    ["FIRE_BLAST", "SUBMISSION", "CONFUSE_RAY", "BODY_SLAM"]),
-        ("RAPIDASH",  ["FIRE_BLAST", "STOMP", "SWIFT", "TAKE_DOWN"]),
+        ("PONYTA",    ["FIRE_BLAST", "STOMP", "TOXIC", "AGILITY"]),
+        ("GROWLITHE", ["FIRE_BLAST", "BODY_SLAM", "BITE", "AGILITY"]),
+        ("MAGMAR",    ["FIRE_BLAST", "PSYCHIC_M", "SUBMISSION", "CONFUSE_RAY"]),
+        ("RAPIDASH",  ["FIRE_BLAST", "STOMP", "SWIFT", "TOXIC"]),
         ("NINETALES", ["FLAMETHROWER", "CONFUSE_RAY", "TOXIC", "BODY_SLAM"]),
-        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "AGILITY", "REFLECT"]),
     ],
 }
 
@@ -168,7 +179,7 @@ GIOVANNI = {
     ],
     "OPP_GIOVANNI#3": [
         ("DUGTRIO",   ["EARTHQUAKE", "ROCK_SLIDE", "SLASH", "SAND_ATTACK"]),
-        ("MAROWAK",   ["EARTHQUAKE", "BONEMERANG", "ICE_BEAM", "BODY_SLAM"]),
+        ("MAROWAK",   ["EARTHQUAKE", "BONE_CLUB", "ICE_BEAM", "BODY_SLAM"]),
         ("PERSIAN",   ["SLASH", "BODY_SLAM", "BUBBLEBEAM", "SCREECH"]),
         ("NIDOQUEEN", ["EARTHQUAKE", "ICE_BEAM", "THUNDERBOLT", "BODY_SLAM"]),
         ("NIDOKING",  ["EARTHQUAKE", "ICE_BEAM", "THUNDERBOLT", "BODY_SLAM"]),
@@ -228,19 +239,19 @@ ELITE_FOUR = {
 # evolved counter-pick to the player's own starter, as the game intends.
 CHAMPION_RB = {
     1: [  # player chose Charmander -> rival carries Blastoise
-        ("PIDGEOT",   ["DOUBLE_EDGE", "SWIFT", "TOXIC", "SAND_ATTACK"]),
+        ("PIDGEOT",   ["DOUBLE_EDGE", "SWIFT", "WING_ATTACK", "TOXIC"]),
         ("ALAKAZAM",  ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
         ("RHYDON",    ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
-        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE",  ["FIRE_BLAST", "DOUBLE_EDGE", "AGILITY", "REFLECT"]),
         ("EXEGGUTOR", ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "STUN_SPORE"]),
         ("BLASTOISE", ["SURF", "BLIZZARD", "BODY_SLAM", "EARTHQUAKE"]),
     ],
     2: [  # Squirtle -> Venusaur
-        ("PIDGEOT",  ["DOUBLE_EDGE", "SWIFT", "TOXIC", "SAND_ATTACK"]),
+        ("PIDGEOT",  ["DOUBLE_EDGE", "SWIFT", "WING_ATTACK", "TOXIC"]),
         ("ALAKAZAM", ["PSYCHIC_M", "RECOVER", "SEISMIC_TOSS", "THUNDER_WAVE"]),
         ("RHYDON",   ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]),
         ("GYARADOS", ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "HYPER_BEAM"]),
-        ("ARCANINE", ["FIRE_BLAST", "DOUBLE_EDGE", "BODY_SLAM", "TAKE_DOWN"]),
+        ("ARCANINE", ["FIRE_BLAST", "DOUBLE_EDGE", "AGILITY", "REFLECT"]),
         ("VENUSAUR", ["RAZOR_LEAF", "SLEEP_POWDER", "BODY_SLAM", "MEGA_DRAIN"]),
     ],
     3: [  # Bulbasaur -> Charizard
@@ -260,7 +271,7 @@ CHAMPION_RB = {
 CHIEF = [
     ("MACHOKE",  ["SUBMISSION", "KARATE_CHOP", "SEISMIC_TOSS", "LOW_KICK"]),
     ("GOLBAT",   ["WING_ATTACK", "CONFUSE_RAY", "TOXIC", "MEGA_DRAIN"]),
-    ("MAROWAK",  ["EARTHQUAKE", "BONEMERANG", "ICE_BEAM", "BODY_SLAM"]),
+    ("MAROWAK",  ["EARTHQUAKE", "BONE_CLUB", "ICE_BEAM", "BODY_SLAM"]),
     ("WEEZING",  ["SLUDGE", "TOXIC", "THUNDERBOLT", "FIRE_BLAST"]),
     ("HYPNO",    ["PSYCHIC_M", "HYPNOSIS", "BODY_SLAM", "REST"]),
     ("PERSIAN",  ["SLASH", "BODY_SLAM", "BUBBLEBEAM", "SCREECH"]),
@@ -389,3 +400,151 @@ RB_RIVAL_TEAMS = {
         3: ["RHYDON", "EXEGGUTOR", "GYARADOS", "PIDGEOT", "ALAKAZAM", "CHARIZARD"],
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# Rival movesets.
+#
+# Until now the rival was the one authored boss carrying no authored moves:
+# the species lists above shipped bare, so the engine filled every slot with
+# the last four moves that species learns by growing up. That is a different,
+# much weaker fight than the one the README describes. The Silph Co. rival --
+# the last six-Pokemon fight before the Elite Four -- fielded a Rhydon whose
+# whole plan was Fury Attack at 15 power, a Pidgeot with one 35-power attack
+# and three status moves, and at Cerulean an Abra that knew only Teleport,
+# which fails outright in a trainer battle: a free turn, every turn.
+#
+# Keyed by species, then by battle label, with "*" as the default. The level
+# range is why: the same Wartortle is fought at 26, 35 and 45, and a Pidgeot's
+# set has no business being the Pidgeotto's. One list does where a species is
+# only ever met once.
+#
+# Two gates police these, both in build_boss_teams:
+#   * level legality, the same check every other roster gets;
+#   * availability.rival_allows -- the TM gate the early gyms use, extended to
+#     the rival's own stage, so the Cerulean fight cannot carry a Celadon TM.
+#
+# The design rule is the gyms': real STAB, one coverage move where the stage
+# allows it, at most one status move, ace a step ahead of its support. He is a
+# rival, not a ninth gym leader -- the job is to be a fight you remember, not
+# the hardest thing in the game.
+# ---------------------------------------------------------------------------
+
+RIVAL_MOVES = {
+    # -- the starters, all three lines ------------------------------------
+    # The lab fight stays exactly what it is: one level 6 starter, two moves,
+    # over in a minute. Everything after it grows a real set.
+    "SQUIRTLE": {"lab": ["TACKLE", "TAIL_WHIP"],
+                 "*": ["BUBBLE", "TACKLE", "TAIL_WHIP"]},
+    "BULBASAUR": {"lab": ["TACKLE", "GROWL"],
+                  "*": ["LEECH_SEED", "TACKLE", "GROWL"]},
+    "CHARMANDER": {"lab": ["SCRATCH", "GROWL"],
+                   "*": ["EMBER", "SCRATCH", "GROWL"]},
+
+    "WARTORTLE": {
+        "cerulean": ["WATER_GUN", "BITE", "TAIL_WHIP", "BUBBLE"],
+        "ss_anne": ["WATER_GUN", "BITE", "BODY_SLAM", "TAIL_WHIP"],
+        "*": ["BUBBLEBEAM", "BODY_SLAM", "BITE", "REFLECT"],
+    },
+    "IVYSAUR": {
+        "cerulean": ["VINE_WHIP", "TACKLE", "LEECH_SEED", "POISONPOWDER"],
+        "ss_anne": ["RAZOR_LEAF", "BODY_SLAM", "LEECH_SEED", "POISONPOWDER"],
+        "*": ["RAZOR_LEAF", "BODY_SLAM", "SLEEP_POWDER", "GROWTH"],
+    },
+    "CHARMELEON": {
+        "cerulean": ["EMBER", "SCRATCH", "RAGE", "LEER"],
+        "ss_anne": ["EMBER", "BODY_SLAM", "SEISMIC_TOSS", "LEER"],
+        "*": ["FLAMETHROWER", "SLASH", "SEISMIC_TOSS", "LEER"],
+    },
+    "BLASTOISE": {"silph": ["SURF", "BODY_SLAM", "SEISMIC_TOSS", "REFLECT"],
+                  "*": ["SURF", "BLIZZARD", "BODY_SLAM", "SEISMIC_TOSS"]},
+    "VENUSAUR": {"*": ["RAZOR_LEAF", "BODY_SLAM", "SLEEP_POWDER", "MEGA_DRAIN"]},
+    "CHARIZARD": {"*": ["FLAMETHROWER", "SLASH", "EARTHQUAKE", "SWORDS_DANCE"]},
+
+    # -- the support cast, Red and Blue -----------------------------------
+    "PIDGEY": {"*": ["GUST", "SAND_ATTACK"]},
+    "SPEAROW": {
+        "route22_first": ["PECK", "GROWL"],
+        "*": ["PECK", "FURY_ATTACK", "LEER", "GROWL"],
+    },
+    "RATTATA": {
+        "route22_first": ["TACKLE", "QUICK_ATTACK", "TAIL_WHIP"],
+        "*": ["HYPER_FANG", "QUICK_ATTACK", "TACKLE", "TAIL_WHIP"],
+    },
+    # Vanilla's Abra knows Teleport and nothing else, and Teleport fails
+    # outright in a trainer battle, so the slot was a free turn every turn.
+    # Mega Punch is a Mt Moon-era TM, which is the era of this fight.
+    "ABRA": {"*": ["MEGA_PUNCH", "TELEPORT"]},
+    "KADABRA": {
+        "cerulean": ["CONFUSION", "MEGA_PUNCH", "DISABLE", "TELEPORT"],
+        "ss_anne": ["CONFUSION", "SEISMIC_TOSS", "BODY_SLAM", "DISABLE"],
+        "*": ["PSYCHIC_M", "SEISMIC_TOSS", "BODY_SLAM", "REFLECT"],
+    },
+    "ALAKAZAM": {"*": ["PSYCHIC_M", "SEISMIC_TOSS", "RECOVER", "THUNDER_WAVE"]},
+    "PIDGEOTTO": {
+        "cerulean": ["GUST", "QUICK_ATTACK", "SAND_ATTACK", "WHIRLWIND"],
+        "ss_anne": ["WING_ATTACK", "QUICK_ATTACK", "GUST", "SAND_ATTACK"],
+        "*": ["DOUBLE_EDGE", "SWIFT", "WING_ATTACK", "SAND_ATTACK"],
+    },
+    "PIDGEOT": {"*": ["DOUBLE_EDGE", "SWIFT", "WING_ATTACK", "TOXIC"]},
+    "RATICATE": {
+        "ss_anne": ["HYPER_FANG", "BODY_SLAM", "QUICK_ATTACK", "TAIL_WHIP"],
+        "*": ["HYPER_FANG", "BODY_SLAM", "SUPER_FANG", "QUICK_ATTACK"],
+    },
+    "EXEGGCUTE": {
+        "ss_anne": ["HYPNOSIS", "LEECH_SEED", "REFLECT", "BARRAGE"],
+        "tower": ["PSYCHIC_M", "LEECH_SEED", "HYPNOSIS", "REFLECT"],
+        "*": ["PSYCHIC_M", "EGG_BOMB", "LEECH_SEED", "HYPNOSIS"],
+    },
+    "EXEGGUTOR": {"*": ["PSYCHIC_M", "EGG_BOMB", "SLEEP_POWDER", "STUN_SPORE"]},
+    "GROWLITHE": {
+        "ss_anne": ["EMBER", "BODY_SLAM", "BITE", "LEER"],
+        "*": ["EMBER", "TAKE_DOWN", "BITE", "AGILITY"],
+    },
+    "ARCANINE": {"*": ["FIRE_BLAST", "DOUBLE_EDGE", "AGILITY", "REFLECT"]},
+    "GYARADOS": {
+        "tower": ["BUBBLEBEAM", "BODY_SLAM", "DRAGON_RAGE", "LEER"],
+        "silph": ["HYDRO_PUMP", "SURF", "BODY_SLAM", "DRAGON_RAGE"],
+        "*": ["HYDRO_PUMP", "BLIZZARD", "BODY_SLAM", "THUNDERBOLT"],
+    },
+    "RHYHORN": {"*": ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TOXIC"]},
+    "RHYDON": {"*": ["EARTHQUAKE", "ROCK_SLIDE", "BODY_SLAM", "TAKE_DOWN"]},
+
+    # -- Yellow's support cast --------------------------------------------
+    "EEVEE": {
+        "lab": ["TACKLE", "TAIL_WHIP"],
+        "route22_first": ["TACKLE", "SAND_ATTACK", "TAIL_WHIP"],
+        "cerulean": ["QUICK_ATTACK", "TACKLE", "SAND_ATTACK", "TAIL_WHIP"],
+        "*": ["QUICK_ATTACK", "BODY_SLAM", "SAND_ATTACK", "TAIL_WHIP"],
+    },
+    "SANDSHREW": {
+        "cerulean": ["SLASH", "SCRATCH", "SAND_ATTACK"],
+        "*": ["SLASH", "BODY_SLAM", "SEISMIC_TOSS", "SAND_ATTACK"],
+    },
+    "SANDSLASH": {"tower": ["ROCK_SLIDE", "BODY_SLAM", "SEISMIC_TOSS", "SAND_ATTACK"],
+                  "*": ["EARTHQUAKE", "ROCK_SLIDE", "SLASH", "SWORDS_DANCE"]},
+    "FEAROW": {"*": ["DRILL_PECK", "PECK", "FURY_ATTACK", "LEER"]},
+    "SHELLDER": {"*": ["AURORA_BEAM", "BUBBLEBEAM", "SUPERSONIC", "WITHDRAW"]},
+    "CLOYSTER": {"silph": ["SURF", "AURORA_BEAM", "TOXIC", "WITHDRAW"],
+                 "*": ["BLIZZARD", "SURF", "TOXIC", "WITHDRAW"]},
+    "MAGNEMITE": {"*": ["THUNDERBOLT", "SWIFT", "THUNDER_WAVE", "SUPERSONIC"]},
+    "MAGNETON": {"*": ["THUNDERBOLT", "SWIFT", "THUNDER_WAVE", "DOUBLE_TEAM"]},
+    "NINETALES": {
+        "tower": ["FLAMETHROWER", "BODY_SLAM", "CONFUSE_RAY", "QUICK_ATTACK"],
+        "*": ["FLAMETHROWER", "BODY_SLAM", "CONFUSE_RAY", "TOXIC"],
+    },
+    "JOLTEON": {"tower": ["THUNDERBOLT", "SWIFT", "DOUBLE_KICK", "THUNDER_WAVE"],
+                "*": ["THUNDERBOLT", "SWIFT", "DOUBLE_KICK", "AGILITY"]},
+    "FLAREON": {"tower": ["EMBER", "BODY_SLAM", "BITE", "QUICK_ATTACK"],
+                "*": ["FLAMETHROWER", "BODY_SLAM", "QUICK_ATTACK", "TOXIC"]},
+    "VAPOREON": {"tower": ["BUBBLEBEAM", "BODY_SLAM", "AURORA_BEAM", "QUICK_ATTACK"],
+                 "*": ["SURF", "BODY_SLAM", "AURORA_BEAM", "ACID_ARMOR"]},
+}
+
+
+def rival_moves(species: str, label: str):
+    """The authored set for a rival slot, or None to leave it to the engine."""
+    spec = RIVAL_MOVES.get(species)
+    if not spec:
+        return None
+    return list(spec.get(label) or spec.get("*") or []) or None

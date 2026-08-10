@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.7.3
+
+Boss switching resolves the way it does in later generations. Gen 1 gives a
+trainer's switch the same slot in the turn order as a move, so anything faster
+than the boss attacked the Pokémon already on its way out. You'd hit it, then
+watch it leave and take your damage with it. A rotation now happens before
+either side moves, and the free move it costs the boss lands on whatever came
+in.
+
+Bosses no longer rotate out of a move that has them pinned. Ducking a Hyper Beam
+recharge, a Thrash, or the Wrap you spent a turn setting up was the boss
+skipping a cost it had already paid. A Pokémon that just came in also has to
+take a turn before it can leave again, which was always meant to be true and
+never actually was.
+
+The rival never had movesets. His species were written, his moves weren't, so
+the game filled every slot with the last four moves that Pokémon learns growing
+up. The Silph Co. rival led with a Rhydon whose best attack was Fury Attack. His
+Abra knew Teleport and nothing else, which fails outright in a trainer battle.
+All 96 slots are written now, and they grow with the run: Hyper Fang at
+Cerulean, Surf and Seismic Toss by Silph, Blizzard only at the rematch.
+
+Blaine has answers. A Blastoise walked into the seventh gym and the best any of
+his six could manage was a neutral Stomp. Gen 1 gives Fire nothing that touches
+Water, so his Magmar carries Psychic and Submission and half the gym runs Toxic.
+
+Lt. Surge has a Surfing Pikachu. Ground is immune to Electric and his gym had no
+answer at all. His Pikachu and Raichu know Surf, like the Pokémon Stadium one.
+It's the only Pokémon in the mod carrying a move it couldn't normally learn.
+Raichu's one-shots any Ground type you can bring at three badges.
+
+Bosses with one type can switch again. Rotation judged a Pokémon by its species,
+so six Fire or six Electric had nothing better to rotate to and never once did
+it. It goes on what they're actually carrying now.
+
+The Elite Four escalates. Lorelei and Bruno were on identical levels, which read
+as the same fight twice. Now 67, 68, 69, 70, and the Champion at 71.
+
+A short gym battle pays a short purse. Prize money comes off the last Pokémon's
+level and the ace is always last, so "2 each" paid what "6 each" did. Gym
+formats also hold the leader to the number you picked with BOSS TEAMS switched
+off, which they didn't before: your side was narrowed, theirs wasn't.
+
+Confuse Ray and Supersonic can be chosen. Same bug the last release fixed for
+the other status moves, missed on these two. 24 roster slots carry one.
+
+Smaller: a trimmed roster keeps the right ace when two Pokémon tie on level
+(Erika was losing her Vileplume), slots that carried a move another move on the
+same Pokémon strictly beat now carry something usable, a rotation the game never
+carried out no longer costs one of the fight's switches, and a heal that would
+have failed no longer counts against the two each Pokémon gets.
+
 ## 1.7.2
 
 Bosses were spamming one move. Three things caused it.

@@ -305,11 +305,39 @@ return function(mod, state)
   mod.exports.healthyList = healthyList
   mod.exports.needsPicker = needsPicker
 
+  -- A shorter fight pays a shorter purse.
+  --
+  -- Gen 1 prize money is `baseMoney x the level of the LAST enemy Pokemon`
+  -- (BattleState.lua:3977), and the roster trim re-sorts survivors by level
+  -- so the ace is always last -- so a "2 each" gym battle paid exactly what a
+  -- "6 each" did. In a difficulty mod the shortest option should not also be
+  -- the most profitable one.
+  --
+  -- Scaled by overlaying baseMoney for this battle only, which is the same
+  -- shape the engine itself uses to give the rival his name
+  -- (BattleState.newTrainer: setmetatable({ name = ... }, { __index = ... })).
+  -- The overlay is what keeps it honest: the "got Y for winning!" line reads
+  -- the same field, so the number announced is the number paid.
+  mod.events:on("battle.started", function(ev)
+    local battle = ev and ev.battle
+    if not (battle and battle.trainer and battle.oppClass == state.class) then
+      return
+    end
+    local full, fielded = state.full, state.fielded
+    if not (full and fielded and fielded < full and full > 0) then return end
+    local base = battle.trainer.baseMoney
+    if type(base) ~= "number" or base <= 0 then return end
+    local scaled = math.max(1, math.floor(base * fielded / full))
+    battle.trainer = setmetatable({ baseMoney = scaled },
+                                  { __index = battle.trainer })
+  end)
+
   -- put the party back the moment the battle is over, win, lose or run
   mod.events:on("battle.ended", function(ev)
     local game = ev and ev.battle and ev.battle.game
     if game then restoreParty(game) end
     state.class, state.count = nil, nil
+    state.full, state.fielded = nil, nil
   end)
 
   -- belt and braces: no progress write may capture a narrowed party

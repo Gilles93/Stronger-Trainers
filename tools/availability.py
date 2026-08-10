@@ -67,7 +67,77 @@ TM_FROM_GYM = {
     "BLIZZARD": 7, "SOLARBEAM": 7,
     "FIRE_BLAST": 8,
     "SUBMISSION": 9, "MEGA_KICK": 9, "SKY_ATTACK": 9, "EXPLOSION": 9,
+    # TMs and HMs no gym team ever reached for, so the table never needed
+    # them. The rival does: he is the only boss authored across the whole
+    # run, and his early fights sit well inside the gated range.
+    "CUT": 3,          # HM01, the S.S. Anne captain
+    "AGILITY": 4,      # TM43, Celadon Game Corner
+    "SCREECH": 4,      # TM04, Celadon department store
+    "LOW_KICK": 4,     # TM18, Celadon department store
+    "SWIFT": 5,        # TM39, the Route 12 house
+    "SURF": 6,         # HM03, Safari Zone secret house
+    "STRENGTH": 6,     # HM04, the Fuchsia warden
+    "TRI_ATTACK": 9,   # TM49, a Silph Co. gift
 }
+
+# Where each rival fight sits on that same scale.
+#
+# The rival is the one boss the player meets at every stage of the run -- a
+# level 6 starter in Oak's lab through a full six before Victory Road -- and
+# the gym gate stops after four badges. Without this his Cerulean fight could
+# legally carry Blizzard: the move is level-legal for the species and no gym
+# rule ever looks at him. The number is the gym ordinal the fight sits before,
+# so 2 reads "Brock is done", and 9 is "everything is obtainable".
+RIVAL_STAGE = {
+    "lab": 1, "route22_first": 1, "cerulean": 2, "ss_anne": 3,
+    "tower": 5, "silph": 6, "route22_second": 9, "champion": 9,
+}
+
+
+# The one deliberate exception to move legality, and it is narrow on purpose.
+#
+# Pikachu cannot be taught Surf by any in-game means in Gen 1 -- but the
+# Surfing Pikachu is real: Pokemon Stadium handed one out, and this engine
+# treats it as a first-class object. data/scripts/yellow_beach_house.lua
+# scans the party for exactly `species == "PIKACHU"` with a move
+# `id == "SURF"` and opens src/ui/SurfingMinigame.lua on a hit. So the
+# species/move pair already exists in this build; Surge is just the one
+# trainer in Kanto who would plausibly own it.
+#
+# It earns its place: Ground is immune to Electric, which makes Surge the
+# only gym whose weakness his whole type cannot answer, and Water is 2x back
+# into Ground and Rock. Surf carries through evolution, so the Raichu having
+# it is the same Pikachu, later.
+#
+# Keyed by (species, move) rather than opened up as a rule: the validator has
+# to go on catching every other illegal move, and an exception that cannot be
+# grepped is an exception that grows.
+EVENT_LEGAL = {
+    ("PIKACHU", "SURF"): "the Pokemon Stadium Surfing Pikachu",
+    ("RAICHU", "SURF"): "the same Pikachu, evolved -- Surf carries over",
+}
+
+
+def event_legal(species: str, move: str) -> bool:
+    """Is this species/move pair a documented exception to legality?"""
+    return (species, move) in EVENT_LEGAL
+
+
+def rival_allows(move: str, label: str) -> bool:
+    """Could the player hold `move` by the time they fight this rival battle?
+
+    Asked of every authored rival move, not just coverage: at the Cerulean
+    fight the difference between Hyper Fang and Blizzard is the whole fight,
+    and neither is "coverage" in the gym sense. A move the TM table does not
+    name is either a level-up move -- gated by level, checked separately --
+    or an HM/TM this table has no opinion on, and those are let through.
+    """
+    stage = RIVAL_STAGE.get(label)
+    if stage is None:
+        return True
+    needed = TM_FROM_GYM.get(move)
+    return needed is None or needed <= stage
+
 
 # How many off-type damaging moves a gym team may carry in total. None means
 # no limit. The ramp tracks the player's own toolkit: nothing before Celadon,
@@ -75,7 +145,14 @@ TM_FROM_GYM = {
 COVERAGE_BUDGET = {
     "OPP_BROCK": 0,
     "OPP_MISTY": 0,
-    "OPP_LT_SURGE": 1,
+    # Two, not one. Electric is the only type in Gen 1 whose weakness is also
+    # its own immunity: Ground walls the entire gym and no Electric move
+    # touches it back. With a single coverage move -- on the ace, where it
+    # arrives last -- a Diglett caught in the cave next door walks the fight.
+    # A second Fighting move earlier in the team is the whole answer this gym
+    # is allowed to have; Water, Grass and Ice are all Celadon TMs the player
+    # does not hold yet either.
+    "OPP_LT_SURGE": 2,
     "OPP_ERIKA": 2,
 }
 
