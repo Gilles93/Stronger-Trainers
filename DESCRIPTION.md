@@ -1,6 +1,6 @@
 # Stronger Trainers
 
-Gen 1 gym leaders bring two Pokémon and use Bide. This fixes that.
+Gen 1 gym leaders are too easy. This fixes that.
 
 Every leader, the Elite Four, the Champion, Giovanni and all fourteen rival
 fights field six Pokémon with hand-picked movesets. Everyone else gets a level
